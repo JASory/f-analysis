@@ -8,7 +8,7 @@ The goal of this library is to provide algorithms for statistical analysis of fe
 Current capability
 
 - Computing fermat pseudoprimes to any base within 2;2^64. Note that computing pseudoprimes greater than 10^12 is impractical
-- Filtering by Euler-Jacobi, Euler-Plumb, Strong Fermat, and first non-quadratic base.
+- Filtering by Euler-Jacobi, Strong Fermat, and first non-quadratic base.
 - Filtering by coprimality, and certain forms of semiprimes
 - Construction of fermat base hashtables, as used in [machine-prime](https://github.com/JASory/machine-prime)
 - Heuristic strong pseudoprime generation.
@@ -20,3 +20,4 @@ Future capability
 - Generating Carmichael numbers
 - Faster generation of pseudoprimes
 - Computing bounds for pseudoprimes for a set of bases (a la Jaeschke)
+- Possibly implement Euler-Plumb, and modified fermat tests

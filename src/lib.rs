@@ -37,7 +37,6 @@ pub use math::Pseudoprime;
 pub use crate::analysis::FAnalysis;
 pub use crate::ce::CounterExamples;
 
-// https://www.reddit.com/r/cryptography/comments/zgal8n/pollard_rho_easy_explanation/
 
 /*
    Research Capability

@@ -8,40 +8,41 @@ use std::path::Path;
 pub struct FAnalysis {
     inf: usize,
     sup: usize,
-    a: usize,
 }
 
 impl FAnalysis {
-    /// Initialise with lower bound of search, upper bound of search and A value for generating counterexamples of the form (k+1)(ak+1)
-    pub fn new(inf: usize, sup: usize, a: usize) -> Self {
-        Self { inf, sup, a }
+    /// Initialise with lower bound of search, upper bound of search
+    pub fn new(inf: usize, sup: usize) -> Self {
+        Self { inf, sup }
     }
 
-    /// Write preliminary data, if it doesn't exist
-    pub fn init_ce(&self) {
+    /// Write preliminary data of the semiprimes of the form (k+1)(ak+1) with the interval
+    pub fn init_semiprime_k(&self, a: usize) {
         let filename = "ce/".to_string()
             + &self.inf.to_string()
             + "_"
             + &self.sup.to_string()
             + "-"
-            + &self.a.to_string();
+            + &a.to_string();
 
         if Path::new("ce").exists() {
             if Path::new(&filename).exists() {
                 () // do nothing
             } else {
                 // create file
-                let mut k_ce = Interval::new(self.inf, self.sup).gen(self.a as u64);
+                let mut k_ce = Interval::new(self.inf, self.sup).gen(a as u64);
                 k_ce.sort();
                 k_ce.write_binary(&filename).unwrap();
             }
         } else {
             std::fs::create_dir("ce").unwrap();
-            let mut k_ce = Interval::new(self.inf, self.sup).gen(self.a as u64);
+            let mut k_ce = Interval::new(self.inf, self.sup).gen(a as u64);
             k_ce.sort();
             k_ce.write_binary(&filename).unwrap();
         }
     }
+    
+    //pub fn init_fermat_ce
     /*
     pub fn iter_search(&self, bound: u64) -> Vec<u64>{
 

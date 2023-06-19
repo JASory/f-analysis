@@ -8,7 +8,12 @@ pub(crate) fn thread_count() -> usize {
         Err(_) => 1usize,
     }
 }
+/*
+pub(crate) fn unary_enumerate<T: FInteger>(ce: &[T], inf: u64, sup: u64)-> u64{
 
+
+} 
+*/
 /*
  Base Search Vector Strong Pseudoprime Interval
 

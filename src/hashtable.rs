@@ -1,4 +1,6 @@
 use crate::io::write::format_block;
+use crate::fermat::FInteger;
+use crate::CompVector;
 
 pub struct HashTable {
     dimen: usize,
@@ -30,6 +32,21 @@ impl HashTable {
             Err(_) => None,
         }
     }
+    /// Evaluates primality for an integer, utilizing the hashtable computed
+    pub fn primality<T: FInteger>(&self, x: T) -> bool{
+       let hash = x.hash_shift((32-self.dimen.trailing_zeros()) as usize, self.multiplier);
+       x.sprp(T::from_u64(self.table[hash]))
+    }
+    
+    /// Checks that the hashtable eliminates all composites from the vector
+    pub fn prove<T: FInteger>(&self, cvec: &CompVector<T>) -> bool{
+         for i in cvec.iter(){
+            if self.primality(*i){
+              return false
+            }
+         }
+         return true
+    }
 }
 
 impl std::fmt::Display for HashTable {
@@ -38,6 +55,6 @@ impl std::fmt::Display for HashTable {
         let m = self.multiplier.to_string();
         let q = format_block::<16, u64>(&self.table);
 
-        write!(f, "divisor: {} multiplier: {} \n {}", d, m, q)
+        write!(f, "divisor: {} multiplier: {} \n hash(x)  = (x as u32).wrapping_mul({})/{} \n {}", d, m,m,d, q)
     }
 }

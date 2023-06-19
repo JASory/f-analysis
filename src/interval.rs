@@ -135,7 +135,9 @@ impl Interval {
         }
         collector.into_iter().flatten().collect::<CompVector<u64>>()
     }
-
+    
+    
+/*
     pub fn generate_ce(&self, a: u64) -> CompVector<u64> {
         let mut k = CompVector::<u64>::new();
 
@@ -170,7 +172,7 @@ impl Interval {
         k.sort();
         k
     }
-
+*/
     /*
     // Strip primes
     pub fn filter_coprime<T: Coprime>(&self) -> CompVector{

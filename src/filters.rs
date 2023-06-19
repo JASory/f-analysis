@@ -216,7 +216,7 @@ impl<const A: usize> FormCheck for SPKA<A> {
     fn is_form<T: FInteger>(x: T) -> bool {
         for i in 2..A {
             if x.is_semiprime_k(i) {
-                return false;
+                return true;
             }
         }
         return false;

@@ -6,7 +6,8 @@ use crate::io::write::{format_block, write_binary};
 use crate::fdata::{FData, Point};
 use crate::fermat::{FInteger, FIterator};
 use crate::hashtable::HashTable;
-use crate::hs::hashsearch::{base_search, hash_search};
+use crate::hs::hashsearch::{hash_search_no_alloc,hash_search};
+use crate::hs::basesearch::{base_search};
 
 /// A vector of integers guaranteed to be composite (unless user calls unchecked variants)
 #[derive(Clone, Debug, PartialEq)]
@@ -426,19 +427,37 @@ impl<T: FInteger> CompVector<T> {
         } // end loop
     }
 
-    /// To hashtable from dimension, multiplier, and search bound
-    pub fn to_ht_param(&self, dimen: usize, multiplier: u32, bound: u64) -> Option<HashTable> {
-        match base_search(self.elements.clone(), dimen, multiplier, bound) {
-            Some(x) => Some(HashTable::new(x, dimen, multiplier)),
-            None => None,
-        }
-    }
 
-    /// Computes hashtable provided with only the size of the hashtable
-    pub fn to_hashtable(&self, dimen: usize) -> Option<HashTable> {
-        let multiplier = hash_search(&self.elements[..], dimen);
-        match base_search(self.elements.clone(), dimen, multiplier, 65535) {
-            Some(x) => Some(HashTable::new(x, dimen, multiplier)),
+    /// Attempts to construct a hashtable of fermat bases with the provided arguments (size, hash multiplier, and fermat base maximum) or use defaults.  
+    /// Note that providing the same integer parameters for the same set results in identical tables being produced, 
+    /// allowing reproducibility. 
+    /// Variation is primarily determined by the multiplier value which is pseudorandomly generated if not provided. 
+    /// For instance to_hashtable(None,Some(3411698987), None) will always produce the same table for the same composite set
+    /// as the dimension is computed as a ratio of the length and the base maximum is 65535 by default
+    pub fn to_hashtable(&self, dimen: Option<usize>, multiplier: Option<u32>,bound: Option<u64>) -> Option<HashTable> {
+        // If dimension of hashtable defined use it, otherwise calculate it 
+        let dim = if let Some(dm) = dimen {
+              dm
+            } else {
+            (self.len()/150).next_power_of_two()
+        };
+       
+        // If multiplier defined use it, otherwise calculate it
+        let mul = if let Some(mx) = multiplier {
+              mx
+            } else {
+            hash_search(&self.elements[..], dim, 1000)
+        };
+        
+        // If multiplier defined use it, otherwise set it as 65535
+        let bnd = if let Some(bd) = bound {
+              bd
+            } else {
+            65535
+        };
+        
+        match base_search(self.elements.clone(), dim, mul, bnd) {
+            Some(x) => Some(HashTable::new(x, dim, mul)),
             None => None,
         }
     }

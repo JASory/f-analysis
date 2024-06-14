@@ -10,7 +10,7 @@ use f_analysis::{CompVector, Interval};
 */
 
 fn main() {
-    
+    /*
     panic!("
        Read this message - To see an example of the hash computation do the following 
        
@@ -22,45 +22,54 @@ fn main() {
        6. Wait approximately 30k seconds divided by the number of cores you have available
        
     ");
+    */
+    let file = "/home/jasory/psps-below-2-to-64.txt";
     
-    let file = "examples/psps-below-2-to-64.txt";
     
-    // Reads from utf-8 file, checking that each number is composite, 
-    // this will fail if any primes exist or the file cannot be read
-    let ce = CompVector::<u64>::read_utf8(file).unwrap();
-    // Alternate simpler example, this simply generates about half of the sprps less than 2^60
-    // let ce = Interval::new(2,1u64<<60).generate_ce(64);
-    let ce_len = ce.len();
-    
-    let psp2 = ce.filter_fermat::<Base<2>>();
-    
-    // Ensures that the composites are all base-2 psps, skip this check if the simpler option is taken
-    assert_eq!(ce_len,psp2.len());
-    
+    // Initialise new CompVector, normally one would use from_vector or from_file 
+    // except we need to read a utf8 file so we have to set the flag before we read the file
+    let mut ce = CompVector::<u64>::new();
+    // Read from a utf8 file versus the default of binary
+    ce.set_utf8();
+    // Assign file to CompVector were we will load it to memory
+    ce.set_file(file);
+    // Load to memory
+    let ce2 = ce.load_to_memory().unwrap();
+
     // Reduce the set to Euler-Plumb pseudoprimes
-    let epseudo = psp2.filter_fermat::<EPF>();
+    // the euler-plumb filter currently only uses filter_generic
+    let mut epseudo = ce.filter_generic::<EPF>(None).unwrap();
     
+    // Epseudo writes to utf-8 file, this is easy  to read in pagers
+    // This function actually returns another CompVector handling this file, 
+    //but we already have the values in memory so we can discard it
+    let _discard = epseudo.to_file("epf.txt").unwrap();
+    
+    epseudo.set_binary();
     // Write the reduced set to a binary file for much faster future evaluations
-    epseudo.write_binary("epf.bin");
-    
-    // Write to readable text
-    epseudo.write_utf8("epf.txt");
+    let _discard = epseudo.to_file("epf.bin").unwrap();
     
     // Compute hashtable, this is the most intensive part, it will use all available cores and may take several hours 
     // Note that this is identical to to_hashtable(Some(262144),Some(1276800789),Some(65535))
     // If you omit the middle argument (the multiplier), it will generate a pseudorandom multiplier, with a different set of bases
     // However this current configuration will always produce the same hashtable
-    let hashtable = epseudo.to_hashtable(None,Some(1276800789),None).unwrap(); 
+    let hashtable = epseudo.compute_hashtable(Some(262144),Some(1276800789),None).unwrap(); 
+    
+    // Uncomment line below to construct a hashtable with 262144 but a different multiplier
+    // let hashtable = epseudo.compute_hashtable(Some(262144),None,None).unwrap();
+    
+    // Uncomment line below to construct a hashtable with the most convenient values 
+    // let hashtable = epseudo.compute_hashtable(None,None,None).unwrap();
     
     // Proves that the hashtable is in fact deterministic against the composite vector it was constructed against. 
     // In practice this will almost surely never fail, excepting hardware failure. However it has application in 
     // testing if it is deterministic against other composite sets
-    if !hashtable.prove(&epseudo){
+    if epseudo.filter_hashtable(&hashtable).len() !=0{
        panic!("Oh, no a silent error prevented us from producing a deterministic hashtable. Report to https://github.com/JASory/f-analysis/issues immediately")
     }
     
     // Now we write it, this will include the hashfunction used
-    hashtable.write_utf8("hashtable.txt");
+    hashtable.to_file("epf-64.ht");
     
     // And we print it, your terminal may not support printing the table as large as this 
     // so it was written to file before hand to make sure it wasn't wasted computation

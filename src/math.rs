@@ -1,8 +1,5 @@
-pub(crate) mod fermat;
-pub(crate) mod ntfunc;
 pub(crate) mod rand;
-pub(crate) mod sieve;
+pub(crate) mod mont_core;
 
-pub(crate) use sieve::plist;
+pub use mont_core::Pseudoprime;
 
-pub use fermat::Pseudoprime;

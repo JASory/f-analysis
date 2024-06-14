@@ -1,4 +1,15 @@
 #[rustfmt::skip]
+pub(crate) static SMALL_PRIMES : [u64;53] = [
+   3,5,7,11,13,17,19,23,29,
+   31,37,41,43,47,53,59,61,67,
+   71,73,79,83,89,97,101,103,107,
+   109,113,127,131,137,139,149,151,
+   157,163,167,173,179,181,191,193,
+   197,199,211,223,227,229,233,239,
+   241,251
+];
+
+#[rustfmt::skip]
 pub(crate) static PRIME_INV_64: [u64; 256] = [
     
            0xaaaaaaaaaaaaaaab ,   0xcccccccccccccccd ,   0x6db6db6db6db6db7 ,   0x2e8ba2e8ba2e8ba3 ,

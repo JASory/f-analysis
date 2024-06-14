@@ -53,6 +53,15 @@ pub struct IntRng<const S: usize,T: FInteger> {
     length: usize,
 }
 
+#[derive(Clone, Copy)]
+pub struct Ideal<const S: usize,T: FInteger> {
+    start: T,
+    idx: usize,
+    length: usize,
+}
+
+
+
 impl<T: FInteger> Iterator for IntSeq<T> {
     type Item = T;
 

@@ -45,7 +45,7 @@ pub(crate) fn read_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
 pub(crate) fn read_binary<T: FInteger>(x: Vec<u8>) -> Vec<T> {
     let mut res = vec![];
     let stride = T::byte_length();
-    for i in 0..x.len() / stride {
+    for i in 0..(x.len() / stride){
         res.push(T::from_bytes(&x[i * stride..(i + 1) * stride]))
     }
     res

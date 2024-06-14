@@ -13,30 +13,25 @@
 //!
 //! - 64-bit cpu
 //! - As many cpu threads as possible (GPU is not currently supported)
+//! - As much RAM as possible. Most operations are limited by persistent harddrive memory not RAM, however RAM is much faster
 //! - RDRAND supported, (no operations require randomness without selecting for it)
-//! - 12 GB of RAM, with atleast 8 GB available (for the most memory-intensive checks possible)
 
-pub(crate) mod analysis;
-pub(crate) mod bsv;
-pub(crate) mod ce;
-pub(crate) mod composite;
-pub(crate) mod hashtable;
-pub(crate) mod hs;
-pub(crate) mod interval;
+pub(crate) mod structures;
 pub(crate) mod io;
 pub(crate) mod math;
 pub(crate) mod primes;
-pub(crate) mod lcomp;
+pub(crate) mod car;
+pub(crate) mod compeval;
 pub(crate) mod search;
-pub mod fdata;
+pub(crate) mod compconfig;
+
 pub mod fermat;
 pub mod filter;
+ mod result;
 
-pub use composite::CompVector;
-pub use interval::Interval;
 pub use math::Pseudoprime;
-pub use crate::analysis::FAnalysis;
-pub use crate::ce::CounterExamples;
+pub use crate::result::FResult;
+pub use crate::structures::{CounterExamples,DataVector,HashTable,Primes,PrimeOrd,CompVector,BaseVector,Interval};
 
 // https://www.reddit.com/r/cryptography/comments/zgal8n/pollard_rho_easy_explanation/
 

@@ -1,5 +1,5 @@
 use crate::filter::filtertype::*;
-use crate::filter::ftraits::{WeakFermat,EulerFermat,StrongFermat};
+use crate::filter::ftraits::{WeakFermat,EulerFermat,StrongFermat,GenericFilter};
 use crate::fermat::FInteger;
 
 impl<const S: usize> WeakFermat for Base<S> {
@@ -124,10 +124,11 @@ impl<const S: usize> StrongFermat for PFB<S> {
     }
 }
 /*
-impl WeakFermat for Miller{
+impl WeakFermat for SFSqr<const A: usize>{
 
   fn fermat<T: FInteger>(x: T) -> bool{
-     let bound = x.ln().powi(2)*2;
+     let b = (X.to_u64()/A as u64).isqrt()+1;
+     x.fermat(T::from_u64(b))
   }
 
 }
@@ -135,7 +136,8 @@ impl WeakFermat for Miller{
 impl StrongFermat for Miller{
 
   fn sprp<T: FInteger>(x: T) -> bool{
-
+    let b = (X.to_u64()/A as u64).isqrt()+1;
+     x.fermat(T::from_u64(b))
   }
 
 }

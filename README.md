@@ -15,9 +15,11 @@ Current capability
 - Iterative selection of bases up to a bound. (e.g picking the strongest base up to a bound, then picking the strongest base against the previous set). Combined with the heuristic prime generation this results in frequently deterministic base sets, although impractical to prove. 
 
 Future capability 
-- 128-bit fermat bases
-- Evolutionary search of bases
 - Generating Carmichael numbers
-- Faster generation of pseudoprimes
-- Computing bounds for pseudoprimes for a set of bases (a la Jaeschke)
-- Possibly implement Euler-Plumb, and modified fermat tests
+- Faster generation of pseudoprimes, using Feitsma's algorithm
+- Computing bounds for pseudoprimes for a set of bases (via Jaeschke or Sorenson and Webster)
+
+## Research Results
+- Machine-prime - The fastest primality test under 2^64
+- SSMR - The fastest primality test under 2^40, and by far the largest interval for a single fermat test
+- A [https://github.com/JASory/Prime-Data/blob/main/Fermat-Base](7-base) set possibly the strongest known for 7 bases

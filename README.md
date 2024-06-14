@@ -22,4 +22,4 @@ Future capability
 ## Research Results
 - Machine-prime - The fastest primality test under 2^64
 - SSMR - The fastest primality test under 2^40, and by far the largest interval for a single fermat test
-- A [https://github.com/JASory/Prime-Data/blob/main/Fermat-Base](7-base) set possibly the strongest known for 7 bases
+- A [7-base](https://github.com/JASory/Prime-Data/blob/main/Fermat-Base) set, possibly the strongest known for 7 bases

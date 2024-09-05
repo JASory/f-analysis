@@ -31,7 +31,8 @@ pub mod filter;
 
 pub use math::Pseudoprime;
 pub use crate::result::FResult;
-pub use crate::structures::{CounterExamples,DataVector,HashTable,Primes,PrimeOrd,CompVector,BaseVector,Interval};
+pub use crate::fermat::extended::traitimpl::Epz;
+pub use crate::structures::{CounterExamples,DataVector,HashTable,Primes,PrimeOrd,CompVector,BaseSeq,Interval,WieferichPrime,Constructor,PCGenerator};
 
 // https://www.reddit.com/r/cryptography/comments/zgal8n/pollard_rho_easy_explanation/
 

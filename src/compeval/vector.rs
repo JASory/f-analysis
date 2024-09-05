@@ -13,11 +13,11 @@ use crate::fermat::{FInteger, FIterator};
 use crate::structures::hashtable::HashTable;
 
 
-pub fn filter_generic_v<T: FInteger,F: GenericFilter>(x : &Vec<T>) -> Vec<T> {
+pub fn filter_generic_v<T: FInteger,F: GenericFilter>(x : &Vec<T>, filter_flag: bool) -> Vec<T> {
         if x.len() > 10000{
-          return filter_par::<T,F>(x.clone(),true)
+          return filter_par::<T,F>(x.clone(),filter_flag)
         }
-        filter_st::<T,F>(&x[..],true)
+        filter_st::<T,F>(&x[..],filter_flag)
     }
 
 /// Returns numbers that are coprime to the first K primes

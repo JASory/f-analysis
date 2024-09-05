@@ -1,4 +1,5 @@
 use crate::fermat::{FInteger,NTCore};
+use crate::primes::{PRIME_INV_128, PRIME_INV_64,SMALL_PRIMES};
 use crate::Pseudoprime;
 
 
@@ -50,6 +51,11 @@ impl FInteger for u128{
 		(*self,otra)
 		
 	}
+	
+	
+	fn wrapping_sub(&self, otra: Self) -> Self{
+	   u128::wrapping_sub(*self,otra)
+	}
 
     fn byte_length() -> usize {
         16usize
@@ -86,9 +92,29 @@ impl FInteger for u128{
 	}
 
     fn trial_bound(&self, s: usize) -> bool {
-	      unimplemented!()
-	   
+	      unimplemented!()  
 	}
+	
+	
+    fn small_factor(&self) -> Vec<u64>{
+       let mut veccy = vec![];
+       
+       for i in SMALL_PRIMES.iter(){
+          if *self% (*i as u128) == 0{
+            veccy.push(*i);
+          }
+       }
+       veccy
+    }
+    
+    fn div_vector(&self, f: &[u64]) -> bool{
+        for i in f.iter(){
+          if *self% (*i as u128) == 0{
+            return true
+          }
+        }
+        return false
+    }
 	 
 	
 	fn euclidean(&self, otra: Self) -> (Self,Self){
@@ -118,21 +144,42 @@ impl FInteger for u128{
    
     
     fn comp_gen_k(k: usize) -> Option<Self> {
-   //     comp_gen_k(k as u64)
-         None
+       if k > 128{
+           return None;
+        }
+        loop{
+          let p = Self::gen_k(k).unwrap();
+          if !p.is_prime(){
+             return Some(p);
+          }
+        }
+		None
     }
 
     fn prime_gen_k(k: usize) -> Option<Self> {
-        //prime_gen_k(k as u64)
+        if k > 128{
+           return None;
+        }
+        loop{
+          let p = Self::gen_k(k).unwrap();
+          if p.is_prime(){
+             return Some(p);
+          }
+        }
 		None
     }
     
     fn gen_k(k: usize) -> Option<Self>{
-      //  let
+      
       if k < 65{
-		return Some(u64::gen_k(k).unwrap() as u128);
+		return u64::gen_k(k).map(|x| x as u128);
 		}
-	 None	
+		let lhs = u64::gen_k(64).unwrap();
+		let rhs = u64::gen_k(64).unwrap();
+	    let hi_digit = 1u128<<k;
+	    let mask = (hi_digit-1)|hi_digit;
+	    let res = (((lhs as u128)<<64) + (rhs as u128))&mask;
+	    Some(res)
     }
 
     fn gcd(&self, other: Self) -> Self {
@@ -218,7 +265,7 @@ impl FInteger for u128{
     
 
     fn jacobi(&self, other: Self) -> i8 {
-           let mut n = *self;
+    let mut n = *self;
     let mut p = other;
     let mut t = 1i8;
     n %= p;
@@ -247,23 +294,16 @@ impl FInteger for u128{
     
 
     fn classify(&self, a: Self) -> Pseudoprime{
-       //fsprp(*self,a)
        	      unimplemented!()
     }
     
     fn fermat(&self, a: Self) -> bool {
-        //fermat(*self, a)
-        	      unimplemented!()
+        NTCore::fermat(self, a)
     }
     
     // Odd-only semifermat
     fn semi_fermat(&self, x: Self, y: Self) -> bool{
-       let prod = x as u128 * y as u128;
-       
-      // if prod > 1u128<<64 {
-      //    return 
-      // }
-       return true;
+       unimplemented!()
     }
 	
 	fn sqr_fermat(&self, base: Self) -> bool{
@@ -277,8 +317,7 @@ impl FInteger for u128{
 	}
     
     fn exp_residue(&self, p: Self, n: Self) -> Self{
-       //pow_64(*self,p,n)
-       unimplemented!()
+       NTCore::expr(self,p,n)
     }
     
     fn euler_jacobi(&self, a: Self) -> bool{
@@ -290,6 +329,9 @@ impl FInteger for u128{
     }
 
     fn sprp(&self, a: Self) -> bool {
+     if *self&1==0{
+       return NTCore::fermat(self,a);
+     }
         NTCore::sprp(self,a)
     }
 
@@ -297,8 +339,12 @@ impl FInteger for u128{
       if *self < (u64::MAX as u128){
          return (*self as u64).is_prime()
       }
-        //is_prime(*self)
-        true
+      for i in SMALL_PRIMES[..20].iter(){
+         if !FInteger::sprp(self,Self::from_u64(*i)){
+            return false;
+         }
+      }
+      return true
     }
     
     fn euler_p(&self) -> bool{
@@ -336,10 +382,12 @@ impl FInteger for u128{
        if *self% (x as u128) != 0{
          return false
        }
-       let val = x as u128;
-       //println!("{}",val);
-       for _ in 0..64{
-         let (val,flag) = val.overflowing_mul(x as u128);
+       let mut val = x as u128;
+       
+       for _ in 0..128{
+         let (val_interim,flag) = val.overflowing_mul(x as u128);
+         
+         val = val_interim;
          
          if flag{ // if overflowed then not perfect power
            return false

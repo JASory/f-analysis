@@ -1,12 +1,12 @@
 // Search functions
-use crate::structures::{Primes,Point,BaseVector,CompVector};
+use crate::structures::{Primes,Point,BaseSeq,CompVector};
 use crate::fermat::{FInteger,IntSeq,FIterator};
 
 use crate::{HashTable};
 use crate::filter::{StrongFermat,Coprime,GenericFilter};
 use std::io::{Read,BufRead,Write};
 use crate::compeval::{vector::*,file::*};
-use crate::search::{hash_search,unary_ht_par,strip_pseudo_par,strip_pseudo_st,binary_evo_st,binary_det_iter_st,binary_evo_par,binary_evo_st_rand_partial, unary_strongest_st,unary_strongest_par,unary_strongest_rand_par,exhaustive_par,exhaustive_rand_par};
+use crate::search::{hash_search,unary_ht_par,strip_pseudo_par,strip_pseudo_st,binary_evo_st,binary_det_iter_st,binary_evo_par,binary_evo_st_rand_partial, unary_strongest_st,unary_strongest_par,unary_strongest_rand_par,exhaustive_par,exhaustive_rand_par, exhaustive_list_par, exhaustive_list_st};
 use crate::io::write::format_block;
 use crate::result::FResult;
 use crate::compconfig::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
@@ -21,10 +21,10 @@ impl<T: FInteger> CompVector<T>{
     
     match fileout{
      Some(x) =>{
-        match std::fs::File::create_new(x){
+        match std::fs::File::create(x){
           Ok(mut output) => {
              if self.elements.len() > 0{
-              let pseudos = filter_generic_v::<T,F>(&self.elements);
+              let pseudos = filter_generic_v::<T,F>(&self.elements, filter_flag);
               // FIXME catch write error
              for i in pseudos{
                  output.write(&i.to_bytes()[..]).unwrap();
@@ -43,7 +43,7 @@ impl<T: FInteger> CompVector<T>{
      None => {
              let mut pseudos : Vec<T> = Vec::new();
              if self.elements.len() > 0{
-                 pseudos = filter_generic_v::<T,F>(&self.elements);
+                 pseudos = filter_generic_v::<T,F>(&self.elements, filter_flag);
              }
              else{
                 let infile = self.file.as_ref().unwrap().try_clone().unwrap();
@@ -80,6 +80,21 @@ impl<T: FInteger> CompVector<T>{
       self.filter_generic_internal::<F>(filename,false)
   }
   
+  pub fn filter_range(&self, inf: T, sup: T) -> FResult<Self>{
+      match &self.file{
+        &None => {
+          let mut k = vec![];
+          for i in self.elements.iter(){
+            if i.is_bounded_by(inf,sup){
+             k.push(*i)
+            }
+          }
+          FResult::Value(Self::from_vector_internal(k,self.memory_max,self.utf8_flag,self.auto_flag))
+        }
+        _=> FResult::NotSupported
+      }
+  }
+  
   /// Attempts to construct a hashtable of fermat bases with the provided arguments (size, hash multiplier, and fermat base maximum) or use defaults.  
     /// Note that providing the same integer parameters for the same set results in identical tables being produced, 
     /// allowing reproducibility. 
@@ -110,7 +125,7 @@ impl<T: FInteger> CompVector<T>{
         };
         
         match unary_ht_par::<T,1>(self.elements.clone(), dim, mul, bnd) {
-            FResult::Exhaustive(x) => FResult::Exhaustive(HashTable::new(x, dim, mul)),
+            FResult::Value(x) => FResult::Value(HashTable::new(x, dim, mul)),
             FResult::InsufficientCandidates(x) => FResult::InsufficientCandidates(x),
                                            _=> FResult::InsufficientCandidates(0),
         }
@@ -119,12 +134,13 @@ impl<T: FInteger> CompVector<T>{
     
     
     pub fn compute_hashtable(&self, dimen: Option<usize>, multiplier: Option<u32>,bound: Option<u64>) -> FResult<HashTable> {
-       
+       self.load_eval(&|x : Self| {
        match dimen{
-         Some(x) => {
+         Some(y) => {
            loop {
-             match self.to_hashtable(Some(x),multiplier,bound){
-               FResult::Exhaustive(res) => return FResult::Exhaustive(res),
+             match x.to_hashtable(Some(y),multiplier,bound){
+               FResult::Value(res) => return FResult::Value(res),
+               //FResult::InsufficientCandidates(c_count) => {println!("Failed at {}",c_count);}
                _=> {()},
              }
            }
@@ -136,7 +152,7 @@ impl<T: FInteger> CompVector<T>{
             
             loop {
               match self.to_hashtable(Some(dm),multiplier,bound){
-                FResult::Exhaustive(res) => return FResult::Exhaustive(res),
+                FResult::Value(res) => return FResult::Value(res),
                 FResult::InsufficientCandidates(c_count) => {
                    if c_count == 0{
                      dm*=2;
@@ -150,17 +166,18 @@ impl<T: FInteger> CompVector<T>{
          } // end loop 
        } // end middle match
     } // end dimen match
+    }) // end closure
     
-    }
+    } // end function
     
     
-    /// Filters the composites using a BaseVector
-    pub fn filter_bvector(&self, fil: &BaseVector<T>) -> Self{
+    /// Filters the composites using a BaseSeq
+    pub fn filter_bvector(&self, fil: &BaseSeq<T>) -> Self{
      
         let mut ce = self.clone();
     
         for i in fil.iter(){
-           ce = ce.sprp_ce(*i);
+           ce = ce.filter_sprp_rt(*i);
         }
       ce
     }
@@ -180,7 +197,7 @@ impl<T: FInteger> CompVector<T>{
     /// Filter by a selected base, collecting all composites that pass
     /// # Usage
     /// This is the run-time equivalent to filter_sprp
-    pub fn sprp_ce(&self, base: T) -> Self{
+    pub fn filter_sprp_rt(&self, base: T) -> Self{
     
        match self.file{
          Some(_) => {
@@ -201,13 +218,13 @@ impl<T: FInteger> CompVector<T>{
         
     }
     
-    pub fn k_iterative(&self, k: usize) -> BaseVector<T>{
+    pub fn k_iterative(&self, k: usize) -> BaseSeq<T>{
       let mut ce = self.clone();
-      let mut bv = BaseVector::<T>::new(vec![]);
+      let mut bv = BaseSeq::<T>::new(vec![]);
       for i in 0..(k-1){
        let bound = 1_000;
          let (c,_) = unary_strongest_par::<T>(ce.elements.clone(),3,bound*(k as u64+1));
-         ce = ce.sprp_ce(T::from_u64(c));
+         ce = ce.filter_sprp_rt(T::from_u64(c));
          bv.append(T::from_u64(c));
       }
       let x = exhaustive_par(ce.elements);
@@ -216,18 +233,19 @@ impl<T: FInteger> CompVector<T>{
   }
   
   /// Infinite search, this is short-circuiting and therefore much faster than a strongest search. However it has an unpredictable run time
-  pub fn terminating_search(&self) -> FResult<BaseVector<T>>{
-     self.load_eval(&|x: Self| FResult::Value(BaseVector::new(vec![T::from_u64(exhaustive_par(x.elements))])))
+  pub fn terminating_search(&self) -> FResult<BaseSeq<T>>{
+     self.load_eval(&|x: Self| FResult::Value(BaseSeq::new(vec![T::from_u64(exhaustive_par(x.elements))])))
   }
   
-  pub fn iterative_search(&self) -> BaseVector<T>{
+  
+  pub fn iterative_search(&self) -> BaseSeq<T>{
       let mut ce = self.clone();
-      let mut bv = BaseVector::<T>::new(vec![]);
+      let mut bv = BaseSeq::<T>::new(vec![]);
       
       while ce.len() > 100{
         let bound = 10_000_000_000u64/(ce.len() as u64);
         let (c,_) = unary_strongest_par::<T>(ce.elements.clone(),3,bound);
-         ce = ce.sprp_ce(T::from_u64(c));
+         ce = ce.filter_sprp_rt(T::from_u64(c));
          bv.append(T::from_u64(c));
       }
       
@@ -244,17 +262,33 @@ impl<T: FInteger> CompVector<T>{
      })
         }
   
-  pub fn bs_rand(&self) -> BaseVector<T>{
+  pub fn bs_rand(&self) -> BaseSeq<T>{
       let b = T::gen_k(64).unwrap();
-      let mut bv = BaseVector::new(vec![b]);
-      let mut ce =  self.sprp_ce(b);
+      let mut bv = BaseSeq::new(vec![b]);
+      let mut ce =  self.filter_sprp_rt(b);
       
       while ce.len() > 0{
         let b = T::gen_k(64).unwrap();
-        ce = ce.sprp_ce(b);
+        ce = ce.filter_sprp_rt(b);
         bv.append(b);
       }
       bv
-  }  
+  }
+  
+  // Returns a list of bases that eliminate all the bases
+  pub fn terminating_list(&self, inf: u64, sup: u64) -> FResult<Vec<u64>> {
+              let (min, max) = inf.min_max(sup);
+              self.load_eval(&|x : Self| {
+                 FResult::Value(exhaustive_list_par(x.elements,min,max))
+              })
+  }
+  
+  // Terminating list but only single-threaded
+  pub fn terminating_list_st(&self, inf: u64, sup: u64) -> FResult<Vec<u64>>{
+         let (min, max) = inf.min_max(sup);
+              self.load_eval_ref(&|x : &Self| {
+                 FResult::Value(exhaustive_list_st(&x.elements[..],min,max))
+              })
+  }
 
 }

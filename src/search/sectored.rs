@@ -54,7 +54,7 @@ fn gcd_check(b: u64, primes: &[u64]) -> bool {
                 c_base
  }
 
-// FIXME is Exhaustive the right return type?
+
 pub(crate) fn unary_ht_par<T: FInteger, const S: usize>(
     ce: Vec<T>,
     dimen: usize,
@@ -125,7 +125,7 @@ pub(crate) fn unary_ht_par<T: FInteger, const S: usize>(
         thread_vec.push(std::thread::spawn(move || {
             'search: loop {
                 // Get current index and increment by the stride
-                let mut c_idx = b_i.load(Ordering::SeqCst);//.wrapping_add(S);
+                let mut c_idx = b_i.load(Ordering::SeqCst);
                 
                  if c_idx != usize::MAX{
                     c_idx = c_idx.wrapping_add(S);
@@ -189,7 +189,7 @@ pub(crate) fn unary_ht_par<T: FInteger, const S: usize>(
      
     let interim = Arc::try_unwrap(o_vec).unwrap();
 	// Convert the vector of Arc bases to 64-bit bases and return
-    FResult::Exhaustive(
+    FResult::Value(
         interim
             .iter()
             .map(|q| q.load(Ordering::SeqCst))

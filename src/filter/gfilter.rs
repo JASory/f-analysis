@@ -146,3 +146,9 @@ impl GenericFilter for Square{
         x.is_square()
     }
 }
+
+impl GenericFilter for Prime{
+   fn filter_check<T: FInteger>(x: T) -> bool{
+      x.is_prime()
+   }
+}

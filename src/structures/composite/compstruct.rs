@@ -11,38 +11,50 @@
  /// 
  /// An explanation of CompVector: 
  ///
- /// CompVector is a set of composites with restrictions on how much memory it can use in RAM, as well as a flag that determines whether to read/write
- /// in utf8 or binary format, and another flag that determines whether to automatically load the file contents into RAN which would allow CompVector to 
- /// behave like a standard library Vec. 
+ /// CompVector is a set of composites with restrictions on how much memory it can use in RAM, as well as a flag that determines
+ /// whether to read/write in utf8 or binary format, and another flag that determines whether to automatically load the file
+ /// contents into RAM which would allow CompVector to behave like a standard library Vec. 
  /// 
- /// For simplicity, let's call a CompVector initialised from a Vec to be CVec and one initialised from a file as CFile. This is important because while they share the same methods,
- /// many of the calculations that can be performed on a Vec in RAM are computationally infeasible for files. However files are important to include because you can store far more data
+ /// For simplicity, let's call a CompVector initialised from a Vec to be CVec and one initialised from a file as CFile. 
+ /// This is important because while they share the same methods, many of the calculations that can be performed on a 
+ /// Vec in RAM are computationally infeasible for files. However files are important to include because you can store far more data
  /// for the calculations that can be performed regardless of the size of the set.
  /// 
  /// Some things to note
  ///
- /// 1. CVec has much of the same functionality as the standard library Vec, as well as being easily parallelisable. This means that it is preferable to load any files to memory if possible.
+ /// 1. CVec has much of the same functionality as the standard library Vec, as well as being easily parallelisable. 
+ ///    This means that it is preferable to load any files to memory if possible.
  ///
- /// 2. CompVector has a flag and a memory_max parameter (accessible via set_auto or set_manual, and set_memory_max respectively), that determines whether or not to load CFile into a CVec
+ /// 2. CompVector has a flag and a memory_max parameter (accessible via set_auto or set_manual, and set_memory_max respectively),
+ ///    that determines whether or not to load CFile into a CVec
  ///
- /// 3. CompVector is infact configured to do exactly that with a default memory bound of 1 Gibibyte, this can be adjusted by passing the exact number of bytes you want to limit to set_memory_max.
- ///  This means that so long as it is allowed to use enough memory a CFile will infact act like a CVec
+ /// 3. CompVector is infact configured to do exactly that with a default memory bound of 1 Gibibyte, this can be adjusted by passing
+ ///    the exact number of bytes you want to limit to set_memory_max. This means that so long as it is allowed to use enough 
+ ///    memory a CFile will infact act like a CVec
  ///
- /// 4. As previously mentioned a CFile will always behave like a CVec so long as enough RAM is available. But if RAM is not available, then it will either return a NotSupported or MemoryExceeded
+ /// 4. As previously mentioned a CFile will always behave like a CVec so long as enough RAM is available. 
+ ///    But if sufficient RAM is not available, then it will either return a NotSupported if it is not 
+ ///    configured to autoload or MemoryExceeded if the autoload flag is set
  ///
- /// 5. Parameters set for one CompVector are inherited by all of the CompVectors calculated from the original. This is done because it's assumed that one would set the memory_max to near the hardware RAM
- /// limit, and the user would likely be interested in writing all files to utf8 or binary. 
- /// 6. CompVectors can be overridden to write to utf-8 or binary with the set_utf8 or set_binary methods. Writing and reading to binary however is the default and the fastest. 
- /// 7. Setting the memory_max to an existing CompVector will not truncate it. However, it will propagate the new memory_max to the new calculated CompVectors
+ /// 5. Parameters set for one CompVector are inherited by all of the CompVectors calculated from the original. 
+ ///    This is done because it's assumed that one would set the memory_max to near the hardware RAM limit, and 
+ ///    the user would likely be interested in writing all files to utf8 or binary.
+ ///
+ /// 6. CompVectors can be overridden to write to utf-8 or binary with the set_utf8 or set_binary methods. Writing 
+ ///    and reading to binary however is the default and the fastest.
+ ///
+ /// 7. Setting the memory_max to an existing CompVector will not truncate it. However, it will propagate the new memory_max to 
+ ///    the new calculated CompVectors
+ ///
  /// 8. Some functions, particularly the filter_generic functions are able to map to CFile directly without loading the entire CFile to memory.
 pub struct CompVector<T: FInteger>{
         // File if used
         pub(crate) file: Option<std::fs::File>,
-        // 
+        // Vector of elements, not necessarily used
         pub(crate) elements: Vec<T>,
-        
+        // Memory Maximum in bytes
         pub(crate) memory_max: u64,
-        //
+        // Flag to determine if read/write to utf8 or binary
         pub(crate) utf8_flag: bool,
         // Flag to determine if memory is automatically used
         pub(crate) auto_flag: bool 

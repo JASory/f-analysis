@@ -1,10 +1,6 @@
-/*
-use crate::math::fermat::*;
-use crate::math::fermat::fsprp;
-*/
 use crate::fermat::{FInteger,NTCore};
 use crate::math::rand::{comp_gen_k,prime_gen_k,gen_k};
-use crate::primes::{PRIME_INV_128, PRIME_INV_64};
+use crate::primes::{PRIME_INV_128, PRIME_INV_64,SMALL_PRIMES};
 use crate::Pseudoprime;
 use machine_prime::is_prime;
 
@@ -48,6 +44,10 @@ impl FInteger for u64 {
 		}
 		(*self,otra)
 		
+	}
+	
+	fn wrapping_sub(&self, otra: Self) -> Self{
+	   u64::wrapping_sub(*self,otra)
 	}
 
     fn byte_length() -> usize {
@@ -115,6 +115,28 @@ impl FInteger for u64 {
     
         return true;
     }
+    
+    fn small_factor(&self) -> Vec<u64>{
+       let mut veccy = vec![];
+       
+       for i in SMALL_PRIMES.iter(){
+          if *self% (*i as u64) == 0{
+            veccy.push(*i);
+          }
+       }
+       veccy
+    }
+    
+    fn div_vector(&self, f: &[u64]) -> bool{
+        for i in f.iter(){
+          if *self% *i==0{
+            return true
+          }
+        }
+        return false
+    }
+    
+    
 
     fn from_bytes(x: &[u8]) -> Self {
         Self::from_le_bytes([x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]])
@@ -262,10 +284,12 @@ impl FInteger for u64 {
     }
     
     fn fermat(&self, a: Self) -> bool {
-      if *self&1 == 0{
-        return NTCore::odd_fermat(self,a)
-      }
+    
+  //    if *self&1 == 0{
+     //   return NTCore::fermat(self,a)
+    //  }
       NTCore::fermat(self,a)
+      
     }
     
     // Odd-only semifermat
@@ -301,6 +325,9 @@ impl FInteger for u64 {
     }
 
     fn sprp(&self, a: Self) -> bool {
+      if *self&1==0{
+         return NTCore::fermat(self,a);
+      }
         NTCore::sprp(self, a)
     }
 
@@ -343,11 +370,13 @@ impl FInteger for u64 {
        if *self% (x as u64) != 0{
          return false
        }
-       let val = x as u64;
+       let mut val = x as u64;
        
        for _ in 0..64{
-         let (val,flag) = val.overflowing_mul(x as u64);
-         
+         let (val_interim,flag) = val.overflowing_mul(x as u64);
+
+         val = val_interim;
+
          if flag{ // if overflowed then not perfect power
            return false
          }
@@ -413,9 +442,4 @@ impl FInteger for u64 {
         let sq = self.isqrt();
         sq * sq == *self
     }
-}
-
-#[test]
-fn egcd(){
-  assert_eq!(2u64.semi_fermat(1093,1093),2u64.fermat(1093*1093));
 }

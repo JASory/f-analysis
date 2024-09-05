@@ -14,8 +14,7 @@ mod fiterator;
 mod ftrait;
 mod eight_bytes;
 mod sixteen_bytes;
-mod epz;
+pub (crate) mod extended;
 
 pub use ftrait::{FInteger, FIterator,NTCore};
-
 pub use fiterator::{CompRng, CompSeq, IntSeq,IntRng, PrimeRng, PrimeSeq};

@@ -1,10 +1,8 @@
 use crate::structures::Primes;
 use crate::fermat::{FInteger,FIterator};
-use crate::{HashTable,CompVector};
+use crate::{HashTable,CompVector, WieferichPrime};
 use crate::filter::WeakFermat;
-use crate::search::thread_count;
-use crate::search::unary_ht_par;
-use crate::search::hash_search;
+use crate::search::{thread_count,unary_ht_par,hash_search};
 use crate::primes::SMALL_PRIMES;
 use crate::car::MRC_18;
 use crate::result::FResult;
@@ -17,6 +15,8 @@ use std::fs::File;
 use std::io::Write;
 use crate::compconfig::{Search,AUTO_FLAG,MEMORY_MAX,UTF8_FLAG};
 
+
+/// Interval for evaluation [low;high}
 #[derive(Clone)]
 pub struct Interval<T: FInteger>{
         inf: T,
@@ -44,24 +44,20 @@ impl<T:FInteger> Interval<T>{
 	       self.mode = Search::Deterministic;
        }
        
-       
-   /// Searches for base^(p-1) mod p*p = 1 returning all p less than sqrt(Max)
-	pub fn fermat_quotient(&self, base: u64) -> Vec<u64>{
-	  
-	  let p_bound = self.sup.isqrt().to_u64() as usize;
+    
+    /// Searches for generalised Wieferich primes within the interval. p such that a^{p-1} mod p^2 = 1
+    pub fn wieferich_search(&self, base: u64) -> WieferichPrime{
+      let p_bound = self.sup.to_u64() as usize;
 	  // Check if primes are already written, if yes then restore, if no generate and write them
 	  let plist = Primes::generate_or_restore(p_bound);
 	  
 	  // Check for the case of 2
+
 	  let mut res = vec![];
 	  
-	  // Check for the case of 2
-	  // base mod 4
-	 // let b = *base&3;
-	  // base^3 mod 4 
-     // if (b*b*b)&3 == 1{
-     //     veccy.push(2);
-     // }
+	  if base.exp_residue(3,4)==1{
+	     res.push(2);
+	  }
 
 	  // Loop over all generated primes and store p if base^p-1 = 1 mod p*p
        for p in plist.iter(){
@@ -70,9 +66,9 @@ impl<T:FInteger> Interval<T>{
            res.push(p)
         }
        }
-      return res
-   }    
-       
+      return WieferichPrime::new(base,res)   
+    }
+ 
    /// Fermat quotients to bases of iterator
    /// This function writes to Standard Out, bases are likely to be out of sequence
    pub fn fq_sequence<F : FIterator<u64>>(&self,iter : F) -> () {
@@ -150,14 +146,14 @@ impl<T:FInteger> Interval<T>{
 	   	match locale {
 	   	   // Write all composites to file
 	   	   Some(x) => {
-	   	       let mut outfile = File::create_new(x).unwrap();
+	   	       let mut outfile = File::create(x).unwrap();
 	   	       let mut out = std::io::BufWriter::new(outfile.try_clone().unwrap());
 	   	       // Monier-Rabin Heuristic
 	   	       for i in plist.iter(){
 	   	       
 	   	          let lhs = T::from_u64(i);
 	   	          
-	   	          for j in [3,4,6].iter(){
+	   	          for j in [3,4,5,6].iter(){
                   let rhs = lhs.even_complement(T::from_u64(*j));
        
                   if rhs.is_prime(){
@@ -188,7 +184,7 @@ impl<T:FInteger> Interval<T>{
                 
                    let lhs = T::from_u64(i);
                    
-	   	           for j in 2..32{
+	   	           for j in 2..2048{
 	   	           
                      let rhs = lhs.semi_k_complement(j);
        
@@ -219,7 +215,7 @@ impl<T:FInteger> Interval<T>{
 	   	      
 	   	          let lhs = T::from_u64(i);
 	   	          
-	   	        for j in [3,4,6].iter(){
+	   	        for j in [3,4,5,6].iter(){
                   let rhs = lhs.even_complement(T::from_u64(*j));
        
                   if rhs.is_prime(){
@@ -234,21 +230,21 @@ impl<T:FInteger> Interval<T>{
                      }
                   }
                 }
-                
+              }
+              
                for i in MRC_18{
                  if T::from_u64(i).is_bounded_by(self.inf,self.sup){
                    ce.push(T::from_u64(i))
                  }
               }
               
-              }
                if self.mode == Search::StrongHeuristic{
                 
                 for i in plist.iter(){
                 
                    let lhs = T::from_u64(i);
                    
-	   	           for j in 2..16{
+	   	           for j in 2..2048{
 	   	           
                      let rhs = lhs.semi_k_complement(j);
        
@@ -289,7 +285,7 @@ impl<T:FInteger> Interval<T>{
 	// FIXME return Insufficient Candidate giving index of value that failed
  pub fn to_hashtable(&self, dimen: Option<usize>, multiplier: Option<u32>,bound: Option<u64>) -> FResult<HashTable>{
       // Number of Bases to evaluate
-     const STRIDE : usize = 400;
+     const STRIDE : usize = 20;
  
      let trial_div = |x: T, pf: &[u64]| -> bool{
         for i in pf{
@@ -310,10 +306,10 @@ impl<T:FInteger> Interval<T>{
         veccy
      };
  
-     let mut x = self.clone();
-     x.set_strong_heuristic();
+     //let mut x = self.clone();
+     //x.set_strong_heuristic();
      // FIXME handle error
-     let mut ce = x.compute_heuristic(None).unwrap();
+     let mut ce = CompVector::<T>::from_file("fusedfermat44.bin").unwrap().load_to_memory().unwrap();//x.compute_heuristic(None).unwrap();
      
      
      let dim = if let Some(d) = dimen {
@@ -338,8 +334,9 @@ impl<T:FInteger> Interval<T>{
             } else {
             65535
         };
-        
-     let baseset = if let FResult::Exhaustive(interim_base) =  unary_ht_par::<T,STRIDE>(ce2, dim, mul, bnd){
+        // Dump to backup stdout
+      //  println!("multiplier {}",mul);
+     let baseset = if let FResult::Value(interim_base) =  unary_ht_par::<T,STRIDE>(ce2, dim, mul, bnd){
           interim_base
         } else {
           vec![]
@@ -446,6 +443,10 @@ impl<T:FInteger> Interval<T>{
                    let d = unsafe { ov_i.get_unchecked(c_idx/STRIDE) };
                     d.store(base, Ordering::SeqCst);
                     outer_flag = false;
+                   // Due to the potentially huge computation involved 
+                   // It helps to print to stdout in a way that lets you sort and construct manually
+                   // incase of computer failure 
+                   // println!("{} {}",c_idx/STRIDE,base);
                    break 'base;
                  }
                 } // end total base check
@@ -476,7 +477,7 @@ impl<T:FInteger> Interval<T>{
             .map(|q| q.load(Ordering::SeqCst))
             .collect::<Vec<u64>>();
             
-    FResult::Exhaustive(HashTable::new(veccy,dim,mul))       
+    FResult::Value(HashTable::new(veccy,dim,mul))       
  }
  
  
@@ -494,7 +495,7 @@ impl<T:FInteger> Interval<T>{
 	   	match locale {
 	   	   // Write all composites to file
 	   	   Some(x) => {
-	   	       let mut outfile = File::create_new(x).unwrap();
+	   	       let mut outfile = File::create(x).unwrap();
 	   	       let mut out = std::io::BufWriter::new(outfile.try_clone().unwrap());
 	   	       // Monier-Rabin Heuristic
 	   	       for i in plist.iter(){
@@ -564,7 +565,7 @@ impl<T:FInteger> Interval<T>{
 	   	      for i in plist.iter(){
 	   	      
 	   	          let lhs = T::from_u64(i);
-	   	        for j in [3,4,6].iter(){
+	   	        for j in [3,4,5,6].iter(){
                   let rhs = lhs.even_complement(T::from_u64(*j));
        
                   if rhs.is_prime(){
@@ -619,103 +620,152 @@ impl<T:FInteger> Interval<T>{
 	
  
  }
-   
-}
-
-
-impl Interval<u64>{
-	
+ 
+ 
+ pub fn generate_fermat<F: WeakFermat>(&self) -> CompVector<T> {
     
-    pub fn generate_fermat<T: WeakFermat>(&self) -> CompVector<u64> {
-    
-        let subproc = |start: u64, stop: u64| -> Vec<u64> {
+        let subproc = |mut start: T, fstride: u64| -> Vec<T> {
             let mut veccy = Vec::new();
-            for i in start..stop {
-                if T::fermat(i) {
-                    if !i.is_prime() {
-                        veccy.push(i)
+            for _ in 0..fstride {
+                if F::fermat(start) {
+                    if !start.is_prime() {
+                        veccy.push(start)
                     }
                 }
+                start.successor();
             }
             return veccy;
         };
-        let sup = self.sup as u64;
-        let inf = self.inf as u64;
-        let threadcount = thread_count();
-
-        let mut threads = vec![];
-
-        let stride = (sup - inf) / threadcount as u64;
-        for i in 0..threadcount {
-            threads.push(std::thread::spawn(move || {
-                subproc(inf + (stride * i as u64), inf + stride * (i as u64 + 1))
-            }))
-        }
-
-        let mut collector = vec![];
-
-        for j in threads {
-            collector.push(j.join().unwrap())
-        }
-        let res = collector.into_iter().flatten().collect::<Vec<u64>>();
-      /*  
-        match out{
-          Some(x) => {
-              res.write_binary(x);
-              return Composite::from_file(x).unwrap();
-              }
-          None =>  Composite::from_vector(res),
-    }
-    */
-    CompVector::<u64>::from_vector(res)
-   }
-  } 
-   /*
-   pub fn fermat_pseudos(&self,base: u64, out: Option<&str>) -> Composite<u64> {
-    
-        let subproc = |start: u64, stop: u64, b: u64| -> Vec<u64> {
-            let mut veccy = Vec::new();
-            for i in start..stop {
-                if i.fermat(b) {
-                    if !i.is_prime() {
-                        veccy.push(i)
-                    }
-                }
-            }
-            return veccy;
-        };
-        let sup = self.sup as u64;
-        let inf = self.inf as u64;
-        let threadcount = thread_count();
-
-        let mut threads = vec![];
-
-        let stride = (sup - inf) / threadcount as u64;
-        for i in 0..threadcount {
-            threads.push(std::thread::spawn(move || {
-                subproc(inf + (stride * i as u64), inf + stride * (i as u64 + 1),base)
-            }))
-        }
-
-        let mut collector = vec![];
-
-        for j in threads {
-            collector.push(j.join().unwrap())
-        }
-        let res = collector.into_iter().flatten().collect::<Vec<u64>>();
         
-        match out{
-          Some(x) => {
-              res.write_binary(x);
-              return Composite::from_file(x).unwrap();
-              }
-          None =>  Composite::from_vector(res),
-    }
+        let t_count = thread_count() as u64;
+      
+        let mut threads = vec![];
+        // FIXME eliminate to_u64, Return error if beyond some bound
+        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from_u64(t_count)).0.to_u64();
+        for i in 0..t_count {
+        
+        let mut start = self.inf;
+        start.inc_by(stride*(i as u64));
+       
+            threads.push(std::thread::spawn(move || {
+                subproc(start,stride)
+            }))
+        }
+
+        let mut collector = vec![];
+
+        for j in threads {
+            collector.push(j.join().unwrap())
+        }
+        let res = collector.into_iter().flatten().collect::<Vec<T>>();
+      
+    CompVector::<T>::from_vector(res)
    }
-  
-   //pub fn fermat_residue(&self, base: u64) -> CompVector
    
-   // Generate the fermat pseudoprimes within the interval;
-   //pub fn generate_pseudoprimes(&self, filename : Option<&str>) -> Composite<u64>{}
+   
+   /// Generate Fermat Pseudoprimes runtime base 
+   pub fn generate_fermat_rt(&self, base: T) -> CompVector<T> {
+    
+        let subproc = |mut start: T, fstride: u64, base: T, fact: Vec<u64>| -> Vec<T> {
+            let mut veccy = Vec::new();
+            for _ in 0..fstride {
+               if !start.div_vector(&fact[..]){
+                if start.fermat(base) {
+                    if !start.is_prime() {
+                        veccy.push(start)
+                    }
+                 }
+                }
+                start.successor();
+            }
+            return veccy;
+        };
+        
+        
+        let subproc_two = |mut start: T, fstride: u64, base: T, fact: Vec<u64>| -> Vec<T> {
+            let mut veccy = Vec::new();
+            for _ in 0..fstride/2 {
+             if !start.div_vector(&fact[..]){
+                if start.fermat(base) {
+                    if !start.is_prime() {
+                        veccy.push(start)
+                    }
+                }
+               } 
+                start.inc_by(2);
+            }
+            return veccy;
+        };
+        
+        let t_count = thread_count() as u64;
+      
+        let mut threads = vec![];
+        // FIXME eliminate to_u64, Return error if beyond some bound
+        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from_u64(t_count)).0.to_u64();
+        let sf = base.small_factor();
+        for i in 0..t_count {
+        
+        let sf_i = sf.clone();
+        let mut start = self.inf;
+        start.inc_by(stride*(i as u64));
+         if base.is_even(){
+         
+            if start.is_even(){
+              start.successor();
+            }
+            
+            threads.push(std::thread::spawn(move || {
+                subproc_two(start,stride, base,sf_i)
+            }))
+          }
+          else{
+               threads.push(std::thread::spawn(move || {
+                subproc(start,stride,base,sf_i)
+            }))
+          }
+          
+        }
+        let mut collector = vec![];
+
+        for j in threads {
+            collector.push(j.join().unwrap())
+        }
+        let res = collector.into_iter().flatten().collect::<Vec<T>>();
+      /*  
+
+
+
+        match out{
+
+
+
+          Some(x) => {
+
+
+
+              res.write_binary(x);
+
+
+
+              return Composite::from_file(x).unwrap();
+
+
+
+              }
+
+
+
+          None =>  Composite::from_vector(res),
+
+
+
+    }
+
+
+
+    */
+    CompVector::<T>::from_vector(res)
+   }
+   
 }
-*/
+  

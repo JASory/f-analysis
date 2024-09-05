@@ -33,6 +33,8 @@ pub trait FInteger:
 	/// Returns the Minimum and Maximum of a 2-tuple
 	fn min_max(&self,otra: Self) -> (Self,Self);
 	
+	fn wrapping_sub(&self, otra: Self) -> Self;
+	
     /// (x*multiplier / 2^shift) mod 2^32
     fn hash_shift(&self, shift: usize, multiplier: u32) -> usize;
     
@@ -50,13 +52,13 @@ pub trait FInteger:
     
     /// Evaluates if integer is coprime to all primes under the provided bound (exclusive)
     fn trial_bound(&self, s: usize) -> bool;
-    /*
-    /// Is divisible by some 64-numbers
-    fn div_vector(&self, divisors: &[u64]) -> u64;
     
-    /// Factors less than 
-    fn small_factor(&self) -> Vec<u64>
-    */
+    /// Is divisible by some 64-numbers
+    fn div_vector(&self, divisors: &[u64]) -> bool;
+    
+    /// Factors between 2 and 311 
+    fn small_factor(&self) -> Vec<u64>;
+    
     fn euclidean(&self, otra: Self) -> (Self,Self);
     
     fn to_u64(&self) -> u64;

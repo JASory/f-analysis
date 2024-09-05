@@ -3,7 +3,7 @@ pub enum FResult<T: Clone>{
   /// Search mode not supported for current configuration
   NotSupported,
   /// Unable to run without exceeding some assigned bound
-  MemoryExceeded,
+  MemoryExceeded(usize),
   /// Some proof of correctness failed
   ProofFailed,
   /// Some proof of correctness succeeded
@@ -12,8 +12,6 @@ pub enum FResult<T: Clone>{
   InsufficientCandidates(usize),
   /// No Candidate found
   NoCandidate,
-  /// Full Solution
-  Exhaustive(T),
   /// Partial Solution with number of counterexamples left 
   Partial(T,usize),
   /// Input output Error
@@ -22,7 +20,9 @@ pub enum FResult<T: Clone>{
   FileDNE,
   /// Successful execution of function that returns unit-type ()
   Success,
-  /// Non-solution result
+  /// Critical Error occurred, a last resort catch-all. This should never be returned
+  Critical,
+  /// Result of operation
   Value(T),
   }
   
@@ -33,15 +33,15 @@ pub enum FResult<T: Clone>{
        match self{
         FResult::Success => write!(f,"Operation Succeeded"),
         FResult::NotSupported => write!(f,"Not supported"),
-        FResult::MemoryExceeded => write!(f,"Unable to access sufficient memory"),
+        FResult::MemoryExceeded(mem) => write!(f,"Required memory {} bytes exceeds the MemoryMax",mem),
         FResult::ProofFailed => write!(f,"Failed Proof"),
         FResult::Verified => write!(f,"Verified"),
         FResult::InsufficientCandidates(x) => write!(f,"{} candidates exist",x),
         FResult::IOError(message) => write!(f,"{}",message),
         FResult::FileDNE => write!(f,"File not found"),
         FResult::NoCandidate => write!(f,"No candidate exists"),
-        FResult::Exhaustive(x) => write!(f,"{}",x),
         FResult::Partial(x,y) => write!(f,"{} {}",x,y),
+        FResult::Critical => write!(f,"Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
         FResult::Value(x) => write!(f,"{}",x),
        }
      }
@@ -52,13 +52,14 @@ pub enum FResult<T: Clone>{
      
   pub fn unwrap(&self) -> T{
         match self{
-          FResult::Exhaustive(x) =>x.clone(),
           FResult::Partial(x,_) => x.clone(), 
           FResult::Value(x) => x.clone(),
           FResult::NotSupported => panic!("Requested operation not supported"),
           FResult::NoCandidate => panic!("No candidate exists"),
           FResult::InsufficientCandidates(x) => panic!("Insufficient Candidates: {}",x),
-          FResult::MemoryExceeded => panic!("Unable to access sufficient memory"),
+          FResult::MemoryExceeded(mem) => panic!("Required memory {} bytes exceeds the MemoryMax",mem),
+          FResult::IOError(message) => panic!("{}",message),
+          FResult::Critical => panic!("Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
           _=> panic!("Value does not exist"),
         }
      }

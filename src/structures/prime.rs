@@ -101,7 +101,7 @@ impl Primes{
   }
   
   pub fn to_vector(&self) -> Vec<u64>{
-         let ndxlmt = self.bitvector.len()*32-1;
+         let ndxlmt = self.bitvector.len()*32 - 1;
          
          (0..ndxlmt as isize)
         .into_iter()
@@ -119,7 +119,7 @@ impl Primes{
 
   pub fn iter(&self) -> Box<dyn Iterator<Item=u64> + '_>{
   
-         let ndxlmt : isize = (self.bitvector.len()*32) as isize -1;
+         let ndxlmt : isize = (self.bitvector.len()*32) as isize-1;
           Box::new((0 .. ndxlmt).into_iter().filter_map(move |i| {
                 //if i < 0 { Some(3) } else {
                     if self.bitvector[i as usize >> 5] & (1u32 << (i & 31)) == 0 {

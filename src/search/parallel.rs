@@ -2,6 +2,8 @@ use crate::fermat::{FInteger,FIterator};
 use crate::filter::{GenericFilter};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use crate::search::exhaustive_st;
+
 
 /*
    Parallel variants of single searching 
@@ -79,6 +81,186 @@ for handle in threads{
   total
 }
 
+// Update 
+
+/*
+  FIXME Rename to exhaustive_interval_par
+   In: A vector of composites, 
+  Out: 
+  */
+pub(crate) fn exhaustive_list_par<T: FInteger>(pseudos: Vec<T>, inf: u64, sup: u64) -> Vec<u64>{
+             let tc = thread_count();
+             
+             let p_arc : Arc<Vec<T>> = Arc::new(pseudos);
+             let b : Arc<AtomicU64>  = Arc::new(AtomicU64::new(inf));
+ 
+             let mut thread_vec : Vec<std::thread::JoinHandle::<Vec<u64>>> = Vec::new();
+             
+            for i in 0..tc{
+            
+              let p_i = Arc::clone(&p_arc);
+              let b_i = Arc::clone(&b);
+              
+              thread_vec.push(std::thread::spawn(move || {
+              
+                let mut valid_base : Vec<u64> = vec![];
+                
+                 'search: loop {
+                // Get current index and increment by the stride
+                let mut base = b_i.load(Ordering::SeqCst);
+                
+                 if base == sup{
+                    break;
+                 }
+                 
+                 if base <= sup{
+                    base = base.wrapping_add(1);
+                 }
+                 
+                 
+                 b_i.store(base,Ordering::SeqCst);
+                 
+                 if exhaustive_st(&p_i,base){
+                 
+                   valid_base.push(base);
+                 }
+            }
+            return valid_base;
+            }
+            ));
+            }
+            let mut total = vec![];
+ 
+            for handle in thread_vec{
+                total.extend_from_slice(&handle.join().unwrap()[..]);
+            }
+             total
+    }
+    
+ /*
+      In: Vector of composites, Vector of bases to evaluate
+     Out: Subset of bases that eliminate all the composites 
+ */
+    /*
+ pub(crate) fn exhaustive_vec_par<T: FInteger>(pseudos: Vec<T>,base: Vec<T>) -> Vec<T>{
+                     let tc = thread_count();
+             
+             let p_arc : Arc<Vec<T>> = Arc::new(pseudos);
+             let idx : Arc<AtomicU64>  = Arc::new(AtomicUsize::new(usize::MAX));
+ 
+             let mut thread_vec : Vec<std::thread::JoinHandle::<Vec<u64>>> = Vec::new();
+             
+            for i in 0..tc{
+            
+              let p_i = Arc::clone(&p_arc);
+              let b_i = Arc::clone(&idx);
+              
+              thread_vec.push(std::thread::spawn(move || {
+              
+                let mut valid_base : Vec<u64> = vec![];
+                
+                 'search: loop {
+                // Get current index and increment by the stride
+                let mut c_idx = b_i.load(Ordering::SeqCst);
+                
+                 if c_idx == usize::MAX{
+                    c_idx = 0;
+                 }
+                 if c_idx == sup{
+                    break;
+                 }
+                 
+                 if c_idx <= sup{
+                    c_idx = c_idx.wrapping_add(1);
+                 }
+                 
+                // Store the current index for other threads to access
+                b_i.store(c_idx, Ordering::SeqCst);
+        
+                 
+                 if exhaustive_st(&p_i,base){
+                   valid_base.push(base);
+                 }
+            }
+            return valid_base;
+            }
+            ));
+            }
+            let mut total = vec![];
+ 
+            for handle in thread_vec{
+                total.extend_from_slice(&handle.join().unwrap()[..]);
+            }
+             total
+ }   
+ */
+/*
+/*
+   In: A vector of composites, a base
+   Out: A vector of composites pseudoprime to provided base
+*/
+
+pub(crate) fn filter_func_par<T: FInteger>(pseudos: Vec<T>,func: &dyn Fn(T) -> bool) -> Vec<T>{
+         // Number of threads
+        let tc = thread_count();
+         // Starting index
+        let start = 0usize;
+         // Final index
+        let stop = pseudos.len();
+        // Length of each vector to be evaluated by individual thread
+        let stride = (stop-start)/tc;
+ 
+        let mut threads : Vec<std::thread::JoinHandle::<Vec<T>>> = Vec::new();
+        //   
+        let p_arc = Arc::new(pseudos);
+
+        // Split  
+        for i in 0..(tc-1){
+	      // Start index for  thread
+          let thread_start = start+i*stride;
+	      // Stop index for thread
+          let thread_stop = start+stride*(i+1);
+	      // Copy 
+          let ce_i = Arc::clone(&p_arc);
+          let f_i = func.clone();
+        threads.push( 
+            std::thread::spawn( move || {
+              let mut res = vec![];
+			  
+              for i in ce_i[thread_start..thread_stop].iter(){
+				  
+                 if (f_i)(*i){
+                    res.push(*i)
+                 }
+				 
+              }
+           res
+            } ));
+        } // end for loop
+  
+        let ce_i = Arc::clone(&p_arc);
+  
+  threads.push(
+        
+      std::thread::spawn( move || {
+        let mut res = vec![];
+        for i in ce_i[start+(tc-1)*stride..stop].iter(){
+           if func(*i){
+             res.push(*i)
+           }
+        }
+         res
+} ));
+
+ let mut total = vec![];
+ 
+for handle in threads{
+     total.extend_from_slice(&handle.join().unwrap()[..]);
+  }
+  total
+}
+
+*/
 /*
 
 */
@@ -103,7 +285,7 @@ pub(crate) fn filter_par<T: FInteger,F: GenericFilter>(pseudos: Vec<T>, filter_f
       std::thread::spawn( move || {
         let mut res = vec![];
         for i in ce_i[thread_start..thread_stop].iter(){
-           if F::filter_check(*i){
+           if F::filter_check(*i)==filter_flag{
              res.push(*i)
            }
         }
@@ -276,7 +458,7 @@ pub(crate) fn exhaustive_par<T: FInteger>(x: Vec<T>) -> u64{
             
            let st = s_i.load(Ordering::SeqCst).wrapping_add(1);
            s_i.store(st, Ordering::SeqCst);
-           //println!("{}",st);
+           
            let start = st*STRIDE;
            let stop = (st+1)*STRIDE;
             

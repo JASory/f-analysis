@@ -49,3 +49,9 @@ pub struct Power<const K: usize>;
 /// All perfect squares 
 pub struct Square;
 
+// Primes
+pub struct Prime;
+
+// Composites
+pub struct Composite;
+

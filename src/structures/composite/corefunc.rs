@@ -1,4 +1,4 @@
-use crate::structures::{Primes,Point,BaseVector,CompVector};
+use crate::structures::{Primes,Point,BaseSeq,CompVector};
 use crate::fermat::{FInteger,IntSeq,FIterator};
 
 use crate::{HashTable};
@@ -9,6 +9,7 @@ use crate::search::{hash_search,unary_ht_par,strip_pseudo_par,strip_pseudo_st,bi
 use crate::io::write::format_block;
 use crate::result::FResult;
 use crate::compconfig::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
+use crate::Constructor;
 
 impl<T: FInteger> Clone for CompVector<T>{
 
@@ -66,6 +67,25 @@ impl<T: FInteger> std::fmt::Display for CompVector<T> {
    }
 }
 
+impl<T: FInteger> std::convert::From<Vec<T>> for CompVector<T>{
+
+      fn from(x: Vec<T>) -> Self{
+         Self::from_vector_internal(x,MEMORY_MAX,UTF8_FLAG,AUTO_FLAG)
+      }
+}
+
+impl<T: FInteger> std::convert::From<std::collections::HashSet<T>> for CompVector<T>{
+
+      fn from(x: std::collections::HashSet<T>) -> Self{
+          let mut out : Self = Self::new();
+          
+         for i in x.iter(){
+            out.push(*i)
+         }
+         out 
+      }
+}
+
 
 impl<T: FInteger> CompVector<T>{
 
@@ -77,6 +97,10 @@ impl<T: FInteger> CompVector<T>{
       utf8_flag: UTF8_FLAG,
 	  auto_flag: AUTO_FLAG
      }
+  }
+  
+  pub fn constructor() -> Constructor<T>{
+      Constructor::<T>::new()
   }
   
   pub fn is_assigned(&self) -> bool{
@@ -152,7 +176,15 @@ impl<T: FInteger> CompVector<T>{
       }
   }
   
-  pub fn satisfies_memory_bound(&self) -> bool{
+  pub fn push(&mut self, el: T){
+      self.elements.push(el);
+  }
+  
+  pub fn append(&mut self, otra: &mut Self){
+      self.elements.append(&mut otra.elements)
+  }
+  
+  pub fn satisfies_memory_bound(&self) -> FResult<T>{
       match &self.file{
        Some(x) => {
          let mut len = x.metadata().unwrap().len() as u64;
@@ -162,13 +194,13 @@ impl<T: FInteger> CompVector<T>{
          }
          
          if self.memory_max < len{
-           return false;
+           return FResult::MemoryExceeded(len as usize);
          }
          
-         return true
+         return FResult::Success;
        }
        
-       None => return true,
+       None => return FResult::Success,
       }
   }
   
@@ -223,7 +255,7 @@ impl<T: FInteger> CompVector<T>{
   // FIXME Map file to file
   pub fn to_file(&self, filename: &str)  -> FResult<Self>{
      
-     match std::fs::File::create_new(filename){
+     match std::fs::File::create(filename){
      
        Ok(x)=> {
   
@@ -271,9 +303,17 @@ impl<T: FInteger> CompVector<T>{
    match &self.file{
       Some(filey) => {
       
-        if !self.satisfies_memory_bound(){
-		  return FResult::MemoryExceeded;
-	    }
+      
+        match self.satisfies_memory_bound(){
+           FResult::MemoryExceeded(mem) => {
+                   return FResult::MemoryExceeded(mem)
+                   },
+           _ => (),
+        }
+        
+        //if !self.satisfies_memory_bound(){
+		//  return FResult::MemoryExceeded;
+	    //}
 	    
 	    let mut r = std::io::BufReader::new(filey.try_clone().unwrap());
 	    
@@ -380,8 +420,8 @@ impl<T: FInteger> CompVector<T>{
               
                return FResult::Success;
              }
-             FResult::MemoryExceeded => FResult::MemoryExceeded,
-             _=> FResult::MemoryExceeded,
+             FResult::MemoryExceeded(mem) => FResult::MemoryExceeded(mem),
+             _=> FResult::Critical,
            }
          }
          None => {
@@ -391,14 +431,20 @@ impl<T: FInteger> CompVector<T>{
        }
   }
   
+  pub fn sort(&mut self) -> FResult<T>{
+      self.mut_vector_op(&<[T]>::sort)
+  }
+  
   // FIXME handle other Result values
   pub fn load_eval<K: Clone>(&self, func: &dyn Fn(Self) -> FResult<K>) -> FResult<K>{
       if self.auto_flag && !self.is_loaded(){
+      
         match self.load_to_memory(){
-        FResult::MemoryExceeded => FResult::MemoryExceeded,
+        
+        FResult::MemoryExceeded(mem) => FResult::MemoryExceeded(mem),
          FResult::Value(x) => func(x),
          FResult::IOError(error_mssg) =>   FResult::IOError(error_mssg),
-         _=> FResult::MemoryExceeded, 
+         _=> FResult::Critical, 
         }
       }
       else if !self.auto_flag && !self.is_loaded(){
@@ -412,11 +458,13 @@ impl<T: FInteger> CompVector<T>{
   // FIXME handle other Result values
   pub fn load_eval_ref<K: Clone>(&self, func: &dyn Fn(&Self) -> FResult<K>) -> FResult<K>{
       if self.auto_flag && !self.is_loaded(){
+      
         match self.load_to_memory(){
-        FResult::MemoryExceeded => FResult::MemoryExceeded,
+        
+         FResult::MemoryExceeded(mem) => FResult::MemoryExceeded(mem),
          FResult::Value(x) => func(&x),
          FResult::IOError(error_mssg) =>   FResult::IOError(error_mssg),
-         _=> FResult::MemoryExceeded, 
+         _=> FResult::Critical, 
         }
       }
       else if !self.auto_flag && !self.is_loaded(){
@@ -427,7 +475,38 @@ impl<T: FInteger> CompVector<T>{
       }
   }
   
+  pub fn set_union(&self, otra: &Self) -> FResult<Self>{
+      match (&self.file,&otra.file){
+      (&None,&None) => {
+         let mut hash_union = std::collections::HashSet::<T>::new();
+         
+         for i in self.elements.iter(){
+             hash_union.insert(*i);
+         }
+         for j in otra.elements.iter(){
+           hash_union.insert(*j);
+         }
+         let interim = hash_union.drain().collect::<Vec<T>>();
+         FResult::Value(Self::from_vector_internal(interim,self.memory_max,self.utf8_flag,self.auto_flag))
+      }
+      _=> FResult::NotSupported,
+      }
+  }
   
+  pub fn make_set(&self) -> FResult<Self>{
+      match &self.file{
+        &None => {
+          let mut hash_union = std::collections::HashSet::<T>::new();
+         
+         for i in self.elements.iter(){
+             hash_union.insert(*i);
+         }
+         let interim = hash_union.drain().collect::<Vec<T>>();
+         FResult::Value(Self::from_vector_internal(interim,self.memory_max,self.utf8_flag,self.auto_flag))
+        }
+        _=> FResult::NotSupported,
+      }
+  }
   
   // FIXME handle autoloading
   pub fn iter(&self) -> FResult<std::slice::Iter<T>>{

@@ -27,6 +27,30 @@ pub(crate) fn filter_st<T: FInteger, F: GenericFilter>(pseudos: &[T], filter_fla
 }
 
 /*
+     In: A slice of composites and a base
+    Out: A flag that determines if the base eliminates all composites
+*/
+
+pub(crate) fn exhaustive_st<T: FInteger>(pseudos: &[T], base: u64) -> bool{
+             for i in pseudos.iter(){
+                if i.sprp(T::from_u64(base)){
+                   return false;
+                }
+             }
+             return true;
+}
+
+
+pub(crate) fn exhaustive_list_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> Vec<u64>{
+           let mut veccy = vec![];
+           for i in inf..sup{
+              if exhaustive_st(pseudos,i){
+                 veccy.push(i);
+              }
+           }
+           veccy
+}
+/*
    In: A slice of composites, a lower bound of bases to search, an upperbound of bases to search
    Out: The base that eliminates all composites, Zero if none found in the bound
 */

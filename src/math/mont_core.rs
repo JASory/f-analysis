@@ -149,6 +149,7 @@ impl NTCore for u64 {
         let s_rem = self.odd_exp_residue(p,s);
         
         let s_inv = s.inv_2()&reducer;
+    
 /*
         let mut s_inv = s;
         
@@ -166,11 +167,12 @@ impl NTCore for u64 {
  }
 
  fn odd_fermat(&self, base: Self) -> bool{
+ //println!("branched");
      let one = self.n_identity();
      let npi = self.inv_2_neg();
      let p = *self -1;
      let b = base.to_mont(*self);
-     if base.mont_pow(one,p,*self,npi) == one{
+     if b.mont_pow(one,p,*self,npi)==one{//.to_z(*self,npi) == 1{
         return true;
      }
      false
@@ -197,7 +199,7 @@ impl NTCore for u64 {
     return false
  }
  
-// FIXME
+// FIXME - Prove this to have no errors for 2Z except powers of two
  fn sprp(&self, base: Self) -> bool {
  
     let p_minus = *self - 1;
@@ -223,7 +225,6 @@ impl NTCore for u64 {
     }
     false
 }
-
 
 // Simple Multiplicative order
 

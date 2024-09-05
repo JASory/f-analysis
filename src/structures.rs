@@ -6,11 +6,17 @@ pub(crate) mod pord;
 pub(crate) mod composite;
 pub(crate) mod base;
 pub(crate) mod interval;
+pub(crate) mod wieferich;
+pub(crate) mod pcg;
+
 pub use fdata::{DataVector,Point};
 pub use hashtable::HashTable;
 pub use ce::CounterExamples;
 pub use prime::Primes;
 pub use pord::PrimeOrd;
 pub use composite::CompVector;
+pub use composite::Constructor;
 pub use interval::Interval;
-pub use base::BaseVector;
+pub use base::BaseSeq;
+pub use wieferich::WieferichPrime;
+pub use pcg::PCGenerator;

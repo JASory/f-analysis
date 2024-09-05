@@ -1,13 +1,13 @@
 # f-analysis
 Number-theoretic library for analysis of Fermat base selection
 
-Currently only supports 64-bit. Uses cpu threads for computation. The more cores available the faster. 
+Currently only supports 128-bit. Uses cpu threads for computation. The more cores available the faster. 
 
 The goal of this library is to provide algorithms for statistical analysis of fermat bases and testing of the reasonableness of conjectures. It is not currently able to replicate the hardest computations, however it provides a greater range of analysis than the current published tables. 
 
 Current capability
 
-- Computing fermat pseudoprimes to any base within 2;2^64. Note that computing pseudoprimes greater than 10^12 is impractical
+- Computing fermat pseudoprimes to any base within 2;2^64. Note that computing pseudoprimes over intervals greater than 10^12 is impractical
 - Filtering by Euler-Jacobi, Strong Fermat, and first non-quadratic base.
 - Filtering by coprimality, and certain forms of semiprimes
 - Construction of fermat base hashtables, as used in [machine-prime](https://github.com/JASory/machine-prime)

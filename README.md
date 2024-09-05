@@ -18,7 +18,8 @@ Future capability
 - Generating Carmichael numbers
 - Faster generation of pseudoprimes, using Feitsma's algorithm
 - Computing bounds for pseudoprimes for a set of bases (via Jaeschke or Sorenson and Webster)
-
+- Extended precision integers
+  
 ## Research Results
 - Machine-prime - The fastest primality test under 2^64
 - SSMR - The fastest primality test under 2^40, and by far the largest interval for a single fermat test

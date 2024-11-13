@@ -86,6 +86,33 @@ impl<T: FInteger> std::convert::From<std::collections::HashSet<T>> for CompVecto
       }
 }
 
+impl<T : FInteger> FromIterator<T> for CompVector<T> {
+
+    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+        let mut out = Self::new();
+        
+        for i in iter{
+            out.push(i)
+         }
+         out 
+      }
+      
+   }   
+    
+/*
+impl<T : FInteger> FromIterator<T> for CompVector<T> {
+
+    fn from_iter<I: IntoIterator<Item=&T>>(iter: I) -> Self {
+        let mut out = Self::new();
+        
+        for i in iter{
+            out.push(i)
+         }
+         out 
+      }
+      
+   }    
+*/
 
 impl<T: FInteger> CompVector<T>{
 
@@ -517,6 +544,14 @@ impl<T: FInteger> CompVector<T>{
       }
   }
   
+  // FIXME handle autoloading
+  pub fn into_iter(&self) -> FResult<std::vec::IntoIter<T>>{
+ 
+      match &self.file{
+        Some(_) => FResult::NotSupported,
+        None => FResult::Value(self.elements.clone().into_iter())
+      }
+  }
   
   }
 

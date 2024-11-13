@@ -1,6 +1,6 @@
 use crate::io::write::format_block;
 use crate::fermat::FInteger;
-use std::sync::{Arc,atomic::{AtomicU64,AtomicUsize,Ordering}};
+use std::sync::{Arc,atomic::{AtomicU64,AtomicUsize,AtomicBool,Ordering}};
 use machine_prime::is_prime_wc;
 use crate::{CompVector,cvec};
 use crate::{result::FResult,search::thread_count};
@@ -32,8 +32,13 @@ impl HashTable {
       self.table[idx]=val;
   }
   
+  pub fn get_idx(&self, idx: usize) -> u64{
+      self.table[idx]
+  }
+  
   // Returns the index and the base that gets selected
   pub fn lut_values<T: FInteger>(&self, x: T) -> (usize,u64){
+      //println!("{}",self.table.len());
       let idx = x.hash_shift((32-self.dimen.trailing_zeros()) as usize, self.multiplier);
       (idx,self.table[idx])
   }
@@ -112,10 +117,10 @@ impl HashTable {
     pub fn prove<T: FInteger>(&self, cvec: &CompVector<T>) -> FResult<T>{
          for i in cvec.to_vector().iter(){
             if self.primality(*i){
-              return FResult::ProofFailed;
+              return FResult::Failure;
             }
          }
-         return FResult::Verified
+         return FResult::Success
     }
     
     /// FIXME Allow composite to be file
@@ -138,8 +143,65 @@ impl HashTable {
        }
        CompVector::<T>::from_vector(veccy)
    }
+   
+   pub fn failure_interval(&self, inf: u64, sup: u64) -> CompVector<u64>{
+   
+       let tc = thread_count();
+       let stride = (inf-sup)/(tc as u64);
+       let mut thread_vec : Vec<std::thread::JoinHandle::<Vec<u64>>> = Vec::new();
+       
+       for i in 0..tc{
+         let ht = self.clone();
+         let start = inf+(stride* (i as u64));
+         let stop = start+stride;
+         
+         thread_vec.push(std::thread::spawn(move || {
+         let mut veccy = vec![];
+         for i in start..stop{
+           let base = ht.lut_values(i).1;
+            if i&2 == 0 || i%3 == 0 || i%5==0{
+               if i.sprp(base){
+                  veccy.push(i);
+               }
+            }
+            else{
+               if i.sprp(base){
+                 if !i.sprp(2){
+                   veccy.push(i)
+                 }
+               }
+            }
+         }
+         veccy
+       }
+         ));
+         
+       }
+       let mut veccy = vec![];
+       for i in thread_vec{
+         let interim = i.join().unwrap();
+         veccy.extend_from_slice(&interim[..]);
+       }
+       CompVector::from(veccy)
+   }
+   
+pub fn lesser_indices(&self, other: &Self) -> Vec<usize>{
+    if self.dimen != other.dimen{
+       panic!("Unequal dimensions");
+    }
+    if self.multiplier != other.multiplier{
+       panic!("Unequal hashes")
+    }
+    let mut indices = vec![];
+    for idx in 0..self.dimen{
+       if self.table[idx] < other.table[idx]{
+          indices.push(idx)
+       }
+    }
+    indices
+}   
 
-pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices: Vec<usize>){
+pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices: Vec<usize>) -> FResult<CompVector<u64>>{
 
        let ce : Arc<CompVector<u64>> = Arc::new(cvec);
        let step = (integer_max>>32).wrapping_add(1);
@@ -148,6 +210,8 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
        let initial : AtomicU64 = AtomicU64::new(0);
        let mut thread_vec : Vec<std::thread::JoinHandle<()>> = Vec::new();
        let idx : Arc<AtomicUsize> = Arc::new(AtomicUsize::new(usize::MAX));
+       let error_idx : Arc<AtomicUsize> = Arc::new(AtomicUsize::new(usize::MAX));
+       let terminator : Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
        let len = indices.len();
        // Initialise Base vector with zeros
        for i in 0..len{
@@ -166,6 +230,8 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
          let ind_i = Arc::clone(&indices);
          let v_i = Arc::clone(&values);
          let idx_i = Arc::clone(&idx);
+         let eidx_i = Arc::clone(&error_idx);
+         let t_i = Arc::clone(&terminator);
          let shift = (32-self.dimen.trailing_zeros()) as usize;
          let multiplier = self.multiplier;
          
@@ -174,6 +240,12 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
          thread_vec.push(std::thread::spawn(  move || {
               'search : loop {
               
+               let term_flag = t_i.load(Ordering::SeqCst);
+               
+               if term_flag{
+                   break 'search;
+               }
+               
                let mut c_idx = idx_i.load(Ordering::SeqCst);
                 
                  if c_idx != len{
@@ -195,7 +267,7 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
                 // Access 
                 
                 let idx = unsafe{*ind_i.get_unchecked(c_idx)};
-                
+                //println!("{} {}",c_idx,idx);
                 //let idx = arc_idx.load(Ordering::SeqCst);
               
              // Calculation
@@ -206,19 +278,32 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
                     veccy.push(*i)
                  }
             }
-
-            let mut bases = veccy.terminating_list_st(2,2000).unwrap();
-            bases.sort();
-            // Residue Class elements under 2^32   
+             // Residue Class elements under 2^32   
             let mut residues = vec![];
             // Calculate initial odd residue class element
             for i in 0u64..0x100000000{
   
-            if i.hash_shift(shift,multiplier)==idx && i%2==1{
+            if i.hash_shift(shift,multiplier)==idx /* && i%2==1 */{
                residues.push(i);
             }
      
            }// end residue loop
+
+           // Set break loop if a valid base is found
+           // If no base is found then either panic or set error flag
+          'incsearch : for i in 0..64{
+            //println!("stepped at {}",i);
+            let mut  flag : bool = false;
+            let mut bases = vec![];
+            
+            if i == 0{
+              bases = veccy.terminating_list_st(2,1024).unwrap();     
+            } else{
+              bases = veccy.terminating_list_st(i*1024,(i+1)*1024).unwrap();
+            }
+
+            bases.sort();
+          //  println!("{:?}",bases);
   
            'bsearch : for b in bases{
              
@@ -227,7 +312,7 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
                  let mut val = *j;
                  
                 for _ in 0..step{
-                
+                 
                  if val.sprp(b){
                  
                    if !is_prime_wc(val){
@@ -240,7 +325,7 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
               } // end residue class loop section
               
             if res_idx == residues.len()-1{
-                //println!("{}",b);
+                flag=true;
                 let interim = unsafe{v_i.get_unchecked(c_idx)};
                 interim.store(b,Ordering::SeqCst);
                 break 'bsearch;
@@ -248,6 +333,18 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
          } // end all residue class loops
 
        }// end base search
+         if flag{
+            break 'incsearch;
+         }
+         // if you reach the end of the incremental search loop without finding a value  then set a flag
+         if i == 63{
+         // set flag
+            t_i.store(true,Ordering::SeqCst);
+         // set the error idx   
+            eidx_i.store(c_idx, Ordering::SeqCst); 
+         }
+       } // end incremented base search
+       
        } // end loop
        }// closure bracket
          ));
@@ -259,6 +356,10 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
         handle.join().unwrap();
     }
 	
+	if terminator.load(Ordering::SeqCst){
+	    let idx = error_idx.load(Ordering::SeqCst);
+	   return FResult::InsufficientCandidates(idx);
+	}
      
     let interim = Arc::try_unwrap(values).unwrap();
 	// Convert the vector of Arc bases to 64-bit bases and return
@@ -271,7 +372,7 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
     for (idx,val) in indices.iter().zip(output.iter()){
        self.set_idx(*val,*idx);
     }
-       
+    FResult::Value(CompVector::from(output))    
   }     
 
 }

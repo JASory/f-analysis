@@ -4,10 +4,8 @@ pub enum FResult<T: Clone>{
   NotSupported,
   /// Unable to run without exceeding some assigned bound
   MemoryExceeded(usize),
-  /// Some proof of correctness failed
-  ProofFailed,
-  /// Some proof of correctness succeeded
-  Verified,
+  /// Generic failure of some operation
+  Failure,
   /// Unable to find sufficient candidates 
   InsufficientCandidates(usize),
   /// No Candidate found
@@ -34,14 +32,13 @@ pub enum FResult<T: Clone>{
         FResult::Success => write!(f,"Operation Succeeded"),
         FResult::NotSupported => write!(f,"Not supported"),
         FResult::MemoryExceeded(mem) => write!(f,"Required memory {} bytes exceeds the MemoryMax",mem),
-        FResult::ProofFailed => write!(f,"Failed Proof"),
-        FResult::Verified => write!(f,"Verified"),
+        FResult::Failure => write!(f,"Failed"),
         FResult::InsufficientCandidates(x) => write!(f,"{} candidates exist",x),
         FResult::IOError(message) => write!(f,"{}",message),
         FResult::FileDNE => write!(f,"File not found"),
         FResult::NoCandidate => write!(f,"No candidate exists"),
         FResult::Partial(x,y) => write!(f,"{} {}",x,y),
-        FResult::Critical => write!(f,"Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
+        FResult::Critical => write!(f,"Unknown Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
         FResult::Value(x) => write!(f,"{}",x),
        }
      }

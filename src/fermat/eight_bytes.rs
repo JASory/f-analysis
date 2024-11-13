@@ -2,7 +2,7 @@ use crate::fermat::{FInteger,NTCore};
 use crate::math::rand::{comp_gen_k,prime_gen_k,gen_k};
 use crate::primes::{PRIME_INV_128, PRIME_INV_64,SMALL_PRIMES};
 use crate::Pseudoprime;
-use machine_prime::is_prime;
+use machine_prime::{is_prime_wc};
 
 impl FInteger for u64 {
 
@@ -325,14 +325,14 @@ impl FInteger for u64 {
     }
 
     fn sprp(&self, a: Self) -> bool {
-      if *self&1==0{
-         return NTCore::fermat(self,a);
-      }
+     // if *self&1==0{
+     //    return NTCore::fermat(self,a);
+     // }
         NTCore::sprp(self, a)
     }
 
     fn is_prime(&self) -> bool {
-        is_prime(*self)
+        is_prime_wc(*self)
     }
     
     fn euler_p(&self) -> bool{

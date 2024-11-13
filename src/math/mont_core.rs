@@ -60,20 +60,17 @@ impl NTCore for u64 {
   }
   
   fn mont_prod(&self, y: Self, n: Self, npi: Self) -> Self{
-     let interim = *self as u128 * y as u128;
-     let tm = (interim as u64).wrapping_mul(npi);
-     let (t,flag) = interim.overflowing_add((tm as u128) * (n as u128));
-     let t = (t>>64) as u64;
-     
-     if flag{
-        t+n.wrapping_neg()
-     }
-     else if t >= n{
-       t-n
-     }
-     else{
-        t
-     }
+    let interim = (*self as u128).wrapping_mul(y as u128);
+    let lo = (interim as u64).wrapping_mul(npi);
+    let lo = ((lo as u128).wrapping_mul(n as u128)>>64) as u64;
+    let hi = (interim>>64)  as u64;
+    
+    if hi < lo{
+       hi.wrapping_sub(lo).wrapping_add(n)
+    }
+    else{
+      hi.wrapping_sub(lo)
+    }
   }
   
   fn mont_sqr(&self, n: Self, npi: Self) -> Self{
@@ -81,18 +78,11 @@ impl NTCore for u64 {
   }
   
   fn to_z(&self, n: Self, npi: Self) ->  Self{
-     let tm = self.wrapping_mul(npi);
-     let (t,flag) = (*self as u128).overflowing_add((tm as u128)*(n as u128));
-     let t = (t>>64) as u64;
      
-     if flag{
-        t + n.wrapping_neg()
-     } else if t >= n{
-        t - n
-     }
-     else{
-       t
-     }
+    let lo = self.wrapping_mul(npi);
+    let lo = ((lo as u128).wrapping_mul(n as u128)>>64) as u64;
+
+    lo.wrapping_neg().wrapping_add(n)
   }
 
  fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
@@ -114,7 +104,7 @@ impl NTCore for u64 {
  fn odd_exp_residue(&self, p: Self, n: Self) -> Self{
     let one = n.n_identity();
     let base = self.to_mont(n);
-    let npi = n.inv_2_neg();
+    let npi = n.inv_2();
     base.mont_pow(one,p,n,npi).to_z(n,npi)
  }
  
@@ -150,40 +140,31 @@ impl NTCore for u64 {
         
         let s_inv = s.inv_2()&reducer;
     
-/*
-        let mut s_inv = s;
-        
-        for _ in 0..10 {
-            // Multiplicative inverse over Z[2k]
-            s_inv = 2u64.wrapping_sub(s_inv.wrapping_mul(s)).wrapping_mul(s_inv) & reducer;
-        }
-*/
         let y = k_rem.wrapping_sub(s_rem).wrapping_mul(s_inv) & reducer;
 
         s_rem + s * y
     } else {
-        self.odd_exp_residue(p,n)//odd_pow64(x, y, n)
+        self.odd_exp_residue(p,n)
     }
  }
 
  fn odd_fermat(&self, base: Self) -> bool{
- //println!("branched");
      let one = self.n_identity();
-     let npi = self.inv_2_neg();
-     let p = *self -1;
+     let npi = self.inv_2();
+     let p = self.wrapping_sub(1);
      let b = base.to_mont(*self);
-     if b.mont_pow(one,p,*self,npi)==one{//.to_z(*self,npi) == 1{
+     if b.mont_pow(one,p,*self,npi)==one{
         return true;
      }
      false
  }
- 
+ // FIXME Test that this is actually correct
  fn p_sq_fermat(&self, base: Self) -> bool{
-       let n = *self * *self;
+       let n = self.wrapping_mul(*self);
        let one = n.n_identity();
-       let npi = n.inv_2_neg();
-       let p = *self -1;
-       let b = base.to_mont(n);
+       let npi = n.inv_2();
+       let p = self.wrapping_sub(1);
+       let b = base.to_mont(*self);
        
        if b.mont_pow(one,p,n,npi) == one{
           return true;
@@ -193,7 +174,11 @@ impl NTCore for u64 {
    
     // Full fermat test
  fn fermat(&self,a: Self) -> bool{
-    if a.expr(*self-1,*self) == 1{
+     if *self&1 == 1{
+        return self.odd_fermat(a)
+     }
+     // FIXME Look to see if you can have an Even-only fermat test that is faster
+    if a.expr(self.wrapping_sub(1),*self) == 1{
        return true;
     }
     return false
@@ -202,11 +187,11 @@ impl NTCore for u64 {
 // FIXME - Prove this to have no errors for 2Z except powers of two
  fn sprp(&self, base: Self) -> bool {
  
-    let p_minus = *self - 1;
+    let p_minus = self.wrapping_sub(1);
     let twofactor = p_minus.trailing_zeros();
     let mut d = p_minus >> twofactor;
    
-    let npi = self.inv_2_neg();
+    let npi = self.inv_2();
     let one = self.n_identity();
     let mut result = base.to_mont(*self);
     result = result.mont_pow(one,d,*self,npi);
@@ -231,7 +216,7 @@ impl NTCore for u64 {
  fn mul_ord(&self,n: Self) -> Self{
     let one = n.n_identity();
     let mut init = *self;
-    let npi = n.inv_2_neg();
+    let npi = n.inv_2();
     
     for i in 0..n{
       init = init.mont_prod(*self,n,npi);
@@ -245,7 +230,7 @@ impl NTCore for u64 {
  fn bounded_ord(&self,n: Self, sup: Self) -> Self{
     let one = n.n_identity();
     let mut init = *self;
-    let npi = n.inv_2_neg();
+    let npi = n.inv_2();
     let x = sup/ *self;
     for i in 0..x{
       init = init.mont_prod(*self,n,npi);
@@ -423,7 +408,8 @@ impl NTCore for u128{
   
   
   fn mont_prod(&self, y: Self, n: Self, npi: Self) ->  Self{
-     let (phi, plo) = u256prod(*self, y);
+ 
+    let (phi, plo) = u256prod(*self, y);
 
     let tm = plo.wrapping_mul(npi);
 
@@ -439,9 +425,34 @@ impl NTCore for u128{
         t
      }
      
+     /*
+    let (hi,lo) = u256prod(*self,y);
+    let lo = lo.wrapping_mul(npi);
+    let lo = u256prod(lo,n).1;
+    
+    
+    if hi < lo{
+       hi.wrapping_sub(lo).wrapping_add(n)
+    }
+    else{
+      hi.wrapping_sub(lo)
+    } 
+     */
     }
 
    fn mont_sqr(&self, n: Self, npi: Self) ->  Self{
+   /*let (hi,lo) = u256sqr(*self);
+    let lo = lo.wrapping_mul(npi);
+    let lo = u256prod(lo,n).1;
+    
+    
+    if hi < lo{
+       hi.wrapping_sub(lo).wrapping_add(n)
+    }
+    else{
+      hi.wrapping_sub(lo)
+    }
+   */
      let (phi, plo) = u256sqr(*self);
 
     let tm = plo.wrapping_mul(npi);
@@ -460,28 +471,14 @@ impl NTCore for u128{
      
     }
     
-    /*
-  fn to_z(&self , n: Self, npi: Self) -> Self{
-     let tm = self.wrapping_mul(npi);
-    
-     let (t, flag) = overflowing_add((0, tm), u256prod(tm, n));
-
-     let t = t.0;
-    
-     if flag{
-        t + n.wrapping_neg()
-     } else if t >= n{
-        t - n
-     }
-     else{
-       t
-     }
-  }
-  
-  */
   fn to_z(&self, n: Self, npi: Self) ->  Self{
-     //let (phi, plo) = u256prod(*self, y);
+    // let (phi, plo) = u256prod(*self, y);
+/*
+    let lo = self.wrapping_mul(npi);
+    let lo = u256prod(lo,n).1;//((lo as u128).wrapping_mul(n as u128)>>64) as u64;
 
+    lo.wrapping_neg().wrapping_add(n)
+  */  
     let tm = self.wrapping_mul(npi);
 
     let (t, overflow) = overflowing_add(u256prod(n, tm), (0, *self));
@@ -495,6 +492,7 @@ impl NTCore for u128{
      } else {
         t
      }
+     
    }  
      
   
@@ -519,7 +517,7 @@ fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
  fn odd_fermat(&self, base: Self) -> bool{
      let one = self.n_identity();
      let npi = self.inv_2_neg();
-     let p = *self -1;
+     let p = self.wrapping_sub(1);
      let b = base.to_mont(*self);
      if b.mont_pow(one,p,*self,npi) == one{
         return true;
@@ -528,11 +526,11 @@ fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
  }
  
  fn p_sq_fermat(&self, base: Self) -> bool{
-       let n = *self * *self;
+       let n = self.wrapping_mul(*self);
        let one = n.n_identity();
        let npi = n.inv_2_neg();
-       let p = *self -1;
-       let b = base.to_mont(n);
+       let p = self.wrapping_sub(1);
+       let b = base.to_mont(*self);
        
        if b.mont_pow(one,p,n,npi) == one{
           return true;
@@ -579,14 +577,7 @@ fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
         let s_rem = self.odd_exp_residue(p,s);
         
         let s_inv = s.inv_2()&reducer;
-/*
-        let mut s_inv = s;
-        
-        for _ in 0..10 {
-            // Multiplicative inverse over Z[2k]
-            s_inv = 2u64.wrapping_sub(s_inv.wrapping_mul(s)).wrapping_mul(s_inv) & reducer;
-        }
-*/
+
         let y = k_rem.wrapping_sub(s_rem).wrapping_mul(s_inv) & reducer;
 
         s_rem + s * y
@@ -596,18 +587,21 @@ fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
  }
  // Full fermat test
  fn fermat(&self,a: Self) -> bool{
-    if a.expr(*self-1,*self) == 1{
+    if *self&1==1{
+       return self.odd_fermat(a)
+    }
+    if a.expr(self.wrapping_sub(1),*self) == 1{
        return true
     }
     return false
  }
 
  fn sprp(&self, base: Self) -> bool {
-    let p_minus = *self - 1;
+    let p_minus = self.wrapping_sub(1);
     let zeroes = p_minus.trailing_zeros();
     let d = p_minus >> zeroes;
 
-    let npi = self.inv_2_neg();
+    let npi = self.inv_2();
     let one = self.n_identity();
     let b = base.to_mont(*self);
     let mut x = b.mont_pow(one,d,*self,npi);
@@ -628,7 +622,7 @@ fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
 fn mul_ord(&self,n: Self) -> Self{
     let one = n.n_identity();
     let mut init = *self;
-    let npi = n.inv_2_neg();
+    let npi = n.inv_2();
     
     for i in 0..n{
       init = init.mont_prod(*self,n,npi);
@@ -642,7 +636,7 @@ fn mul_ord(&self,n: Self) -> Self{
  fn bounded_ord(&self,n: Self, sup: Self) -> Self{
     let one = n.n_identity();
     let mut init = *self;
-    let npi = n.inv_2_neg();
+    let npi = n.inv_2();
     let x = sup/ *self;
     for i in 0..x{
       init = init.mont_prod(*self,n,npi);

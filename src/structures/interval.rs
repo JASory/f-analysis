@@ -465,9 +465,9 @@ impl<T:FInteger> Interval<T>{
     }
 	
 
-    // If flag was set return None as the base search failed
+    // If flag was set return Failure as the base search failed
     if Arc::try_unwrap(flag).unwrap().load(Ordering::SeqCst) {
-        return FResult::ProofFailed;
+        return FResult::Failure;
     }
      
     let interim = Arc::try_unwrap(o_vec).unwrap();

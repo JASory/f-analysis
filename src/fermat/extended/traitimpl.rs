@@ -5,7 +5,7 @@ use crate::Pseudoprime;
  /// Extended Precision Integer (Zahl)
 #[derive(Clone,Copy,Debug,Hash,PartialEq,PartialOrd,Eq,Ord)]
 pub struct Epz<const S : usize>{
-	pub (crate) limbs: [u64;S],
+	pub limbs: [u64;S],
 }
 
 
@@ -22,6 +22,7 @@ const fn one<const S : usize>() -> Epz<S>{
 const fn byte_length<const S : usize>() ->usize{
 	S*8usize
 }
+ 
 
 impl<const S : usize> Default for Epz<S>{
 	fn default() -> Self{
@@ -133,6 +134,15 @@ impl<const S : usize> FInteger for Epz<S>{
     /// Number of bytes used in representation
     fn byte_length() -> usize{
 	   Self::BYTE_LENGTH
+	}
+	
+	fn msb(&self) -> usize{
+	   match self.limbs.iter().rposition(|x| *x !=0){
+	     Some(pos) => {
+	       return pos*64+(64-self.limbs[pos].leading_zeros() as usize);
+	     },
+	     None => return 0usize,
+	   }
 	}
     
     /// From Little-Endian bytes
@@ -256,3 +266,42 @@ impl<const S : usize> FInteger for Epz<S>{
 		unimplemented!()
 	}
 }
+
+
+/*
+  Algorithm 
+  
+  Check if Length will fit in binary array of length S
+  check if String is all ASCII digits
+  
+  Map string to radix-10^19 vector
+  
+  Convert to radix-2^64, fill the resultant array
+  
+  
+*/
+
+/*
+impl std::str::FromStr for EPZ<S>{
+     type Err = &str;
+     
+ fn from_str(input: &str) -> Result<Self,Self::Err>{
+    let  minimumlen = (19.265919722*(S as f64)).floor() as usize;
+    let inputlen = input.len()/19;
+    // Check 
+    if input.len()*19 > minimumlen{
+     return Err("String too large")
+    }
+    
+    let b = input.bytes().all(|c| c.is_ascii_digit());
+
+    if !b {
+        return Err("Non-digit characters in string");
+    }
+    
+    let mut digit_vector = Vec::with_capacity()
+    for i in 
+    
+ }
+}
+*/

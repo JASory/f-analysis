@@ -43,7 +43,7 @@ impl HashTable {
       (idx,self.table[idx])
   }
 
-    pub fn to_file(&self, locale: &str) -> Option<()> {
+    pub fn to_file(&self, locale: &str) -> FResult<()> {
         use std::fs::File;
         use std::io::Write;
 
@@ -51,15 +51,15 @@ impl HashTable {
             Ok(mut out) => {
                 let res = self.to_string();
                 match out.write_all(res.as_bytes()) {
-                    Ok(_) => Some(()),
-                    Err(_) => None,
+                    Ok(_) => FResult::Success,
+                    Err(message) => FResult::IOError(message),
                 }
             }
-            Err(_) => None,
+            Err(message) => FResult::IOError(message),
         }
     }
     
-    
+    /// Fix errors
     pub fn from_file(filename: &str) -> FResult<Self>{
         use std::io::BufRead;
         
@@ -98,6 +98,10 @@ impl HashTable {
               }
             }
             
+            if param.len() != div{
+               return FResult::Err("Table of incorrect dimensions");
+            }
+            
             let res = HashTable{dimen: div, multiplier: mul, table: param };
             FResult::Value(res)
           }
@@ -108,7 +112,6 @@ impl HashTable {
     
     /// Evaluates primality for an integer, utilizing the hashtable computed
     pub fn primality<T: FInteger>(&self, x: T) -> bool{
-      // let hash = x.hash_shift((32-self.dimen.trailing_zeros()) as usize, self.multiplier);
        x.sprp(T::from_u64(self.lut_values(x).1))
     }
     
@@ -144,22 +147,22 @@ impl HashTable {
        CompVector::<T>::from_vector(veccy)
    }
    
-   pub fn failure_interval(&self, inf: u64, sup: u64) -> CompVector<u64>{
+   pub fn failure_interval(&self, inf: u64, sup: u64, total: bool) -> CompVector<u64>{
    
        let tc = thread_count();
-       let stride = (inf-sup)/(tc as u64);
+       let stride = (sup-inf)/(tc as u64);
        let mut thread_vec : Vec<std::thread::JoinHandle::<Vec<u64>>> = Vec::new();
        
        for i in 0..tc{
          let ht = self.clone();
          let start = inf+(stride* (i as u64));
          let stop = start+stride;
-         
          thread_vec.push(std::thread::spawn(move || {
          let mut veccy = vec![];
+         if total{
          for i in start..stop{
            let base = ht.lut_values(i).1;
-            if i&2 == 0 || i%3 == 0 || i%5==0{
+            if i&2 == 0 || i%3 == 0 || i%5==0 || i%7==0{
                if i.sprp(base){
                   veccy.push(i);
                }
@@ -171,6 +174,27 @@ impl HashTable {
                  }
                }
             }
+         }
+         }
+         if !total{
+         for i in start..stop{
+           if i&1 == 0{
+             continue;
+           }
+           let base = ht.lut_values(i).1;
+            if i%3 == 0 || i%5==0 || i%7==0{
+               if i.sprp(base){
+                  veccy.push(i);
+               }
+            }
+            else{
+               if i.sprp(base){
+                 if !i.sprp(2){
+                   veccy.push(i)
+                 }
+               }
+            }
+         }
          }
          veccy
        }
@@ -185,12 +209,32 @@ impl HashTable {
        CompVector::from(veccy)
    }
    
-pub fn lesser_indices(&self, other: &Self) -> Vec<usize>{
+pub fn  update(&self,sup: u64,flag: bool) -> FResult<Self>{
+      if !sup.is_power_of_two(){
+         return FResult::NotSupported
+      }
+      
+      let errors = self.failure_interval(4,sup,flag);
+      
+      let mut ht = self.clone();
+      let mut idx_set = std::collections::HashSet::new();
+      for i in errors.iter().unwrap(){
+         idx_set.insert(i.hash_shift((32-self.dimen.trailing_zeros()) as usize,self.multiplier));
+      }
+      let indices = idx_set.drain().collect::<Vec<usize>>();
+      
+      match ht.corrector_set(errors,sup,indices,flag){
+         FResult::Value(_) => FResult::Value(ht.clone()),
+         _=> FResult::NotSupported,
+      }
+}   
+   
+pub fn lesser_indices(&self, other: &Self) -> FResult<Vec<usize>>{
     if self.dimen != other.dimen{
-       panic!("Unequal dimensions");
+       return FResult::Err("Unequal dimensions");
     }
     if self.multiplier != other.multiplier{
-       panic!("Unequal hashes")
+       return FResult::Err("Unequal hashes");
     }
     let mut indices = vec![];
     for idx in 0..self.dimen{
@@ -198,10 +242,26 @@ pub fn lesser_indices(&self, other: &Self) -> Vec<usize>{
           indices.push(idx)
        }
     }
-    indices
+    FResult::Value(indices)
 }   
 
-pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices: Vec<usize>) -> FResult<CompVector<u64>>{
+pub fn promote(&mut self, other: &Self) -> FResult<&str>{
+    if self.dimen != other.dimen{
+       return FResult::Err("Unequal dimensions");
+    }
+    if self.multiplier != other.multiplier{
+       return FResult::Err("Unequal hashes");
+    }
+    
+    for (i,j) in self.table.iter_mut().zip(other.table.iter()){
+        if j > i{
+          *i = *j;
+        }
+    }
+    FResult::Success
+}
+
+pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices: Vec<usize>, total: bool) -> FResult<CompVector<u64>>{
 
        let ce : Arc<CompVector<u64>> = Arc::new(cvec);
        let step = (integer_max>>32).wrapping_add(1);
@@ -281,14 +341,25 @@ pub fn corrector_set(&mut self, cvec: CompVector<u64>, integer_max: u64, indices
              // Residue Class elements under 2^32   
             let mut residues = vec![];
             // Calculate initial odd residue class element
-            for i in 0u64..0x100000000{
+            if total{
+              for i in 0u64..0x100000000{
   
-            if i.hash_shift(shift,multiplier)==idx /* && i%2==1 */{
-               residues.push(i);
+                if i.hash_shift(shift,multiplier)==idx{
+                   residues.push(i);
+                }
+              }// end residue loop
+  
             }
+            if !total{
+            
+             for i in 0u64..0x100000000{
+  
+               if i.hash_shift(shift,multiplier)==idx && i%2==1{
+                 residues.push(i);
+               }
      
-           }// end residue loop
-
+             }// end residue loop
+          }
            // Set break loop if a valid base is found
            // If no base is found then either panic or set error flag
           'incsearch : for i in 0..64{

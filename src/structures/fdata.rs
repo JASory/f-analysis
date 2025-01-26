@@ -1,4 +1,5 @@
 use crate::fermat::FInteger;
+use crate::result::FResult;
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
@@ -128,12 +129,12 @@ impl<T: FInteger> DataVector<T> {
         self.data.iter().map(|x| x.base()).collect::<Vec<T>>()
     }
      /// Algorithm improvement, weight the stronger bases more
-    pub fn sequence_stat(&self, otra: Self) -> u64{
+    pub fn sequence_stat(&self, otra: Self) -> FResult<u64>{
         if self.data.len() != otra.data.len(){
-          panic!("Lengths do not match")
+          return FResult::Err("Data vectors are of different lengths");
         }
         if self.sort_flag==false || otra.sort_flag == false{
-          panic!("Both Fdata structures need to be sorted")
+          return FResult::Err("Both Fdata structures need to be sorted");
         }
         let mut delta = 0u64;
         for (idx,el) in self.data.iter().enumerate(){
@@ -143,6 +144,6 @@ impl<T: FInteger> DataVector<T> {
                }
            }
         }
-        delta
+        FResult::Value(delta)
     }
 }

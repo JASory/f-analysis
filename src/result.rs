@@ -16,6 +16,8 @@ pub enum FResult<T: Clone>{
   IOError(std::io::Error),
   /// File Does Not Exist
   FileDNE,
+  /// All other errors
+  Err(&'static str),
   /// Successful execution of function that returns unit-type ()
   Success,
   /// Critical Error occurred, a last resort catch-all. This should never be returned
@@ -39,6 +41,7 @@ pub enum FResult<T: Clone>{
         FResult::NoCandidate => write!(f,"No candidate exists"),
         FResult::Partial(x,y) => write!(f,"{} {}",x,y),
         FResult::Critical => write!(f,"Unknown Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
+        FResult::Err(message) => write!(f,"{}",message),
         FResult::Value(x) => write!(f,"{}",x),
        }
      }
@@ -56,6 +59,7 @@ pub enum FResult<T: Clone>{
           FResult::InsufficientCandidates(x) => panic!("Insufficient Candidates: {}",x),
           FResult::MemoryExceeded(mem) => panic!("Required memory {} bytes exceeds the MemoryMax",mem),
           FResult::IOError(message) => panic!("{}",message),
+          FResult::Err(message) => panic!("{}",message),
           FResult::Critical => panic!("Critical error occurred, file issue immediately to https://github.com/JASory/f-analysis"),
           _=> panic!("Value does not exist"),
         }

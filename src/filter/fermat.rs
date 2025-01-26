@@ -1,6 +1,6 @@
 use crate::filter::filtertype::*;
 use crate::filter::ftraits::{WeakFermat,EulerFermat,StrongFermat,GenericFilter};
-use crate::fermat::FInteger;
+use crate::fermat::{FInteger,NTCore};
 
 impl<const S: usize> WeakFermat for Base<S> {
     fn fermat<T: FInteger>(x: T) -> bool {
@@ -42,11 +42,13 @@ impl<const S: usize, const P: usize> EulerFermat for DBase<S,P>{
 
 impl<const S: usize, const P : usize> StrongFermat for DBase<S,P> {
     fn sprp<T: FInteger>(x: T) -> bool {
+    
         if !x.sprp(T::from_u64(S as u64)){
            return false
         }
         x.sprp(T::from_u64(P as u64))
     }
+    
 }
 
 impl<const S: usize, const P : usize, const Q: usize> WeakFermat for TBase<S,P,Q> {

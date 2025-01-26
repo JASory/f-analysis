@@ -1,5 +1,7 @@
 use crate::fermat::{FInteger,NTCore};
-use crate::primes::{PRIME_INV_128, PRIME_INV_64,SMALL_PRIMES};
+use crate::primes::{PRIME_INV_128,SMALL_PRIMES};
+//use crate::math::mont_core::lucas;
+use machine_prime::{PRIME_INV_64,is_prime_128};
 use crate::Pseudoprime;
 
 
@@ -61,6 +63,10 @@ impl FInteger for u128{
         16usize
     }
 
+    fn msb(&self) -> usize{
+        128usize-self.leading_zeros() as usize
+    }
+    
     fn hash_shift(&self, shift: usize, multiplier: u32) -> usize {
         ((*self as u32).wrapping_mul(multiplier) >> shift) as usize
     }
@@ -336,15 +342,7 @@ impl FInteger for u128{
     }
 
     fn is_prime(&self) -> bool {
-      if *self < (u64::MAX as u128){
-         return (*self as u64).is_prime()
-      }
-      for i in SMALL_PRIMES[..20].iter(){
-         if !FInteger::sprp(self,Self::from_u64(*i)){
-            return false;
-         }
-      }
-      return true
+       machine_prime::is_prime_128(*self)      
     }
     
     fn euler_p(&self) -> bool{

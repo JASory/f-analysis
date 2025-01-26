@@ -1,8 +1,8 @@
 use crate::fermat::{FInteger,NTCore};
 use crate::math::rand::{comp_gen_k,prime_gen_k,gen_k};
-use crate::primes::{PRIME_INV_128, PRIME_INV_64,SMALL_PRIMES};
+use crate::primes::{PRIME_INV_128,SMALL_PRIMES};
 use crate::Pseudoprime;
-use machine_prime::{is_prime_wc};
+use machine_prime::PRIME_INV_64;
 
 impl FInteger for u64 {
 
@@ -53,7 +53,11 @@ impl FInteger for u64 {
     fn byte_length() -> usize {
         8usize
     }
-
+    
+    fn msb(&self) -> usize{
+        64usize-self.leading_zeros() as usize
+    }
+    
     fn hash_shift(&self, shift: usize, multiplier: u32) -> usize {
         ((*self as u32).wrapping_mul(multiplier) >> shift) as usize
     }
@@ -323,16 +327,26 @@ impl FInteger for u64 {
        }
        a.exp_residue((*self-1)/2,*self)== (Self::from_u64(r as u64))
     }
-
+     // Performs particularly bad for base-2 for some reason
     fn sprp(&self, a: Self) -> bool {
-     // if *self&1==0{
-     //    return NTCore::fermat(self,a);
-     // }
+       /*
+       // Precomputation values, in functions where multiple sprp checks are performed these values can be reused
+        let one = self.n_identity();
+        let npi = self.inv_2();
+        let self_minus = self.wrapping_sub(1);
+        let twofactor = self_minus.trailing_zeros();
+        let d = self_minus>>twofactor;
+        let oneinv = self.one_inverse_n(one,npi);
+        // The only precomputed value that depends on the base and not N
+        let base = a.to_mont(*self);
+        */
+        // Calculation
+      //  self.mont_sprp(base,d,twofactor,one,oneinv,npi)
         NTCore::sprp(self, a)
     }
 
     fn is_prime(&self) -> bool {
-        is_prime_wc(*self)
+        machine_prime::is_prime(*self)
     }
     
     fn euler_p(&self) -> bool{

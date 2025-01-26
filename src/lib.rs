@@ -15,7 +15,7 @@
 //! - As many cpu threads as possible (GPU is not currently supported)
 //! - As much RAM as possible. Most operations are limited by persistent harddrive memory not RAM, however RAM is much faster
 //! - RDRAND supported, (no operations require randomness without selecting for it)
-
+#![allow(unused)]
 pub(crate) mod structures;
 pub(crate) mod io;
 pub(crate) mod math;

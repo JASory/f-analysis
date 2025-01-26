@@ -67,7 +67,8 @@ pub trait FInteger:
     
     /// Number of bytes used in representation
     fn byte_length() -> usize;
-    
+    /// Position of highest set bit
+    fn msb(&self) -> usize;
     /// From Little-Endian bytes
     fn from_bytes(x: &[u8]) -> Self;
     /// To Little-Endian bytes
@@ -160,7 +161,7 @@ pub trait NTCore {
 
    fn mont_sub(&self, y: Self, n: Self) -> Self;
    
-   fn mont_add(&self, y: Self) -> Self;
+   fn mont_add(&self, y: Self, n: Self) -> Self;
    
    fn inv_2(&self) -> Self;
    
@@ -173,6 +174,11 @@ pub trait NTCore {
    fn to_z(&self, n: Self, npi: Self) ->  Self;
    
    fn n_identity(&self) -> Self;
+   // 2 in Montgomery form
+   fn two_identity(&self,one: Self) -> Self;
+   
+   // n-1 Montgomery form
+   fn one_inverse_n(&self,one: Self, npi: Self ) -> Self;
    
    fn to_mont(&self,n: Self) -> Self;
    
@@ -180,6 +186,7 @@ pub trait NTCore {
    
    fn sprp(&self, base: Self) -> bool;
    
+   fn mont_sprp(&self, base: Self, d: Self, twofactor: u32, one: Self, oneinv: Self, npi: Self) -> bool;
    // Odd only fermat 
    fn odd_fermat(&self, base: Self) -> bool;
    // Prime square

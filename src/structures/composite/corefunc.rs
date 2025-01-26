@@ -74,17 +74,6 @@ impl<T: FInteger> std::convert::From<Vec<T>> for CompVector<T>{
       }
 }
 
-impl<T: FInteger> std::convert::From<std::collections::HashSet<T>> for CompVector<T>{
-
-      fn from(x: std::collections::HashSet<T>) -> Self{
-          let mut out : Self = Self::new();
-          
-         for i in x.iter(){
-            out.push(*i)
-         }
-         out 
-      }
-}
 
 impl<T : FInteger> FromIterator<T> for CompVector<T> {
 
@@ -99,20 +88,7 @@ impl<T : FInteger> FromIterator<T> for CompVector<T> {
       
    }   
     
-/*
-impl<T : FInteger> FromIterator<T> for CompVector<T> {
 
-    fn from_iter<I: IntoIterator<Item=&T>>(iter: I) -> Self {
-        let mut out = Self::new();
-        
-        for i in iter{
-            out.push(i)
-         }
-         out 
-      }
-      
-   }    
-*/
 
 impl<T: FInteger> CompVector<T>{
 
@@ -152,21 +128,23 @@ impl<T: FInteger> CompVector<T>{
   }
   
   
-  pub fn set_file(&mut self,locale: &str){
+  pub fn set_file(&mut self,locale: &str) -> FResult<T>{
      if self.is_assigned(){
-       panic!("Already assigned a value")
+       return FResult::Err("Already assigned a value");
      }
     self.file = Some(std::fs::OpenOptions::new().read(true).write(true).open(locale).unwrap()); 
-    
+    FResult::Success
   }
   
   
  /// Set  CompVector to be equal to vector
-  pub fn set_vector(&mut self, el: Vec<T>){
+  pub fn set_vector(&mut self, el: Vec<T>) -> FResult<T>{
      if self.is_assigned(){
-       panic!("Already assigned a value")
+       return FResult::Err("Already assigned a value");
      }
       self.elements = el;
+      
+      FResult::Success
   }
   
   /// Set to read and write in binary 
@@ -207,6 +185,14 @@ impl<T: FInteger> CompVector<T>{
       self.elements.push(el);
   }
   
+  /// Add from a collection that implements IntoIterator
+  pub fn append_collection<F: IntoIterator<Item=T>>(&mut self, otra: F){
+         for i in otra.into_iter(){
+            self.push(i);
+         }
+  }
+  
+  /// Appends all elements to self  
   pub fn append(&mut self, otra: &mut Self){
       self.elements.append(&mut otra.elements)
   }
@@ -272,9 +258,8 @@ impl<T: FInteger> CompVector<T>{
       self.elements.clone()
   }
 	  
-	/// Initialises from vector  
-  pub fn from_vector(comp: Vec<T>) -> Self{
-  
+	/// Initialises from vector slightly faster than std::convert::From  
+  pub fn from_vector(comp: Vec<T>) -> Self{  
       Self::from_vector_internal(comp,MEMORY_MAX,UTF8_FLAG,AUTO_FLAG)
       }
       
@@ -293,14 +278,21 @@ impl<T: FInteger> CompVector<T>{
            for i in self.elements.iter(){
               let out_str = i.to_string()+"\n"; 
         
-              wrtr.write(out_str.as_bytes()).unwrap();
+              match wrtr.write(out_str.as_bytes()){
+                Ok(_) => (),
+                Err(message) => return FResult::IOError(message),
+              }
          }
        }
        
        if self.utf8_flag == false{
        
           for i in self.elements.iter(){
-              wrtr.write(&i.to_bytes()[..]).unwrap();
+          
+             match wrtr.write(&i.to_bytes()[..]){
+               Ok(_) => (),
+               Err(message) => return FResult::IOError(message),
+             }
           }
        }
        
@@ -318,7 +310,7 @@ impl<T: FInteger> CompVector<T>{
      }
   }
   
-        /// loads file into RAM if possible, this is preferred as it allows much faster datahandling, including parallel evaluation
+        /// Loads file into RAM if possible, this is preferred as it allows much faster datahandling, including parallel evaluation
 	   /// # MemoryExceeded
 	   /// If file size is greater than 1 GiB, then returns None
 	   /// # ReadError
@@ -338,9 +330,6 @@ impl<T: FInteger> CompVector<T>{
            _ => (),
         }
         
-        //if !self.satisfies_memory_bound(){
-		//  return FResult::MemoryExceeded;
-	    //}
 	    
 	    let mut r = std::io::BufReader::new(filey.try_clone().unwrap());
 	    
@@ -409,7 +398,7 @@ impl<T: FInteger> CompVector<T>{
   }
   
   
-    pub fn write_vector_internal(&mut self, mut output: &std::fs::File){
+pub(crate) fn write_vector_internal(&mut self, mut output: &std::fs::File){
        use std::io::prelude::*;
        use std::io::SeekFrom;
        
@@ -435,13 +424,13 @@ impl<T: FInteger> CompVector<T>{
   
  
   
-  pub fn mut_vector_op(&mut self, F: &dyn Fn(&mut [T]) -> ())-> FResult<T>{
+  pub fn mut_vector_op(&mut self, op: &dyn Fn(&mut [T]) -> ())-> FResult<T>{
        match &self.file{
          Some(x) => {
            match self.load_to_memory(){
              FResult::Value(mut interim) => {
             
-               F(&mut interim.elements);
+               op(&mut interim.elements);
               
             interim.write_vector_internal(x);
               
@@ -452,7 +441,7 @@ impl<T: FInteger> CompVector<T>{
            }
          }
          None => {
-           F(&mut self.elements);
+           op(&mut self.elements);
            return FResult::Success;
          }
        }
@@ -551,6 +540,18 @@ impl<T: FInteger> CompVector<T>{
         Some(_) => FResult::NotSupported,
         None => FResult::Value(self.elements.clone().into_iter())
       }
+  }
+  
+  pub fn reducible<F: FInteger>(&self) -> bool{
+  
+       let maxbits = T::BYTE_LENGTH*8;
+       
+      for i in self.iter().unwrap(){
+         if i.msb() > maxbits{
+            return false;
+         }
+      }
+      return true;
   }
   
   }

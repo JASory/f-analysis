@@ -1,17 +1,18 @@
 use crate::structures::{Primes,Point,BaseSeq,CompVector};
-use crate::fermat::{FInteger,IntSeq,FIterator};
+use crate::iterator::{IntSeq,BaseIterator};
+use crate::Natural;
 
 use crate::{HashTable};
 use crate::filter::{StrongFermat,Coprime,GenericFilter};
 use std::io::{Read,BufRead,Write};
-use crate::compeval::{vector::*,file::*};
+use crate::structures::composite::{vector::*,file::*};
 use crate::search::{hash_search,unary_ht_par,strip_pseudo_par,strip_pseudo_st,binary_evo_st,binary_det_iter_st,binary_evo_par,binary_evo_st_rand_partial, unary_strongest_st,unary_strongest_par,unary_strongest_rand_par,exhaustive_par,exhaustive_rand_par};
 use crate::io::write::format_block;
-use crate::result::FResult;
-use crate::compconfig::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
+use crate::FResult;
+use crate::enums::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
 use crate::Constructor;
 
-impl<T: FInteger> Clone for CompVector<T>{
+impl<T: Natural> Clone for CompVector<T>{
 
    fn clone(&self) -> Self{
    
@@ -37,7 +38,7 @@ impl<T: FInteger> Clone for CompVector<T>{
      
 }
 
-impl<T: FInteger> std::fmt::Display for CompVector<T> {
+impl<T: Natural> std::fmt::Display for CompVector<T> {
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     
@@ -67,7 +68,7 @@ impl<T: FInteger> std::fmt::Display for CompVector<T> {
    }
 }
 
-impl<T: FInteger> std::convert::From<Vec<T>> for CompVector<T>{
+impl<T: Natural> std::convert::From<Vec<T>> for CompVector<T>{
 
       fn from(x: Vec<T>) -> Self{
          Self::from_vector_internal(x,MEMORY_MAX,UTF8_FLAG,AUTO_FLAG)
@@ -75,7 +76,7 @@ impl<T: FInteger> std::convert::From<Vec<T>> for CompVector<T>{
 }
 
 
-impl<T : FInteger> FromIterator<T> for CompVector<T> {
+impl<T : Natural> FromIterator<T> for CompVector<T> {
 
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
         let mut out = Self::new();
@@ -90,7 +91,7 @@ impl<T : FInteger> FromIterator<T> for CompVector<T> {
     
 
 
-impl<T: FInteger> CompVector<T>{
+impl<T: Natural> CompVector<T>{
 
   pub fn new() -> Self{
       Self{
@@ -542,7 +543,7 @@ pub(crate) fn write_vector_internal(&mut self, mut output: &std::fs::File){
       }
   }
   
-  pub fn reducible<F: FInteger>(&self) -> bool{
+  pub fn reducible<F: Natural>(&self) -> bool{
   
        let maxbits = T::BYTE_LENGTH*8;
        

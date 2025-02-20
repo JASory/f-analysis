@@ -1,4 +1,5 @@
-use crate::fermat::{FInteger,FIterator};
+use crate::iterator::{BaseIterator};
+use crate::Natural;
 use crate::filter::GenericFilter;
 
 /*
@@ -6,7 +7,7 @@ use crate::filter::GenericFilter;
    Out: A vector of composites pseudoprime to the provided base
 */
 
-pub(crate) fn strip_pseudo_st<T: FInteger>(pseudos: &[T],base: T) -> Vec<T>{
+pub(crate) fn strip_pseudo_st<T: Natural>(pseudos: &[T],base: T) -> Vec<T>{
     let mut veccy = vec![];
     for i in pseudos.iter(){
       if i.sprp(base){
@@ -16,7 +17,7 @@ pub(crate) fn strip_pseudo_st<T: FInteger>(pseudos: &[T],base: T) -> Vec<T>{
     veccy
 }
 
-pub(crate) fn filter_st<T: FInteger, F: GenericFilter>(pseudos: &[T], filter_flag: bool) -> Vec<T>{
+pub(crate) fn filter_st<T: Natural, F: GenericFilter>(pseudos: &[T], filter_flag: bool) -> Vec<T>{
     let mut veccy = vec![];
     for i in pseudos.iter(){
       if F::filter_check(*i)==filter_flag{
@@ -31,9 +32,9 @@ pub(crate) fn filter_st<T: FInteger, F: GenericFilter>(pseudos: &[T], filter_fla
     Out: A flag that determines if the base eliminates all composites
 */
 
-pub(crate) fn exhaustive_st<T: FInteger>(pseudos: &[T], base: u64) -> bool{
+pub(crate) fn exhaustive_st<T: Natural>(pseudos: &[T], base: u64) -> bool{
              for i in pseudos.iter(){
-                if i.sprp(T::from_u64(base)){
+                if i.sprp(T::from(base)){
                    return false;
                 }
              }
@@ -41,7 +42,7 @@ pub(crate) fn exhaustive_st<T: FInteger>(pseudos: &[T], base: u64) -> bool{
 }
 
 
-pub(crate) fn exhaustive_list_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> Vec<u64>{
+pub(crate) fn exhaustive_list_st<T: Natural>(pseudos: &[T], inf: u64, sup: u64) -> Vec<u64>{
            let mut veccy = vec![];
            for i in inf..sup{
               if exhaustive_st(pseudos,i){
@@ -54,13 +55,13 @@ pub(crate) fn exhaustive_list_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64)
    In: A slice of composites, a lower bound of bases to search, an upperbound of bases to search
    Out: The base that eliminates all composites, Zero if none found in the bound
 */
-pub(crate) fn unary_det_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> u64 {
+pub(crate) fn unary_det_st<T: Natural>(pseudos: &[T], inf: u64, sup: u64) -> u64 {
      if inf >= sup {
       return 0;
      }
     for i in inf..sup {
         for (idx, k) in pseudos.iter().enumerate() {
-            if k.sprp(T::from_u64(i)) {
+            if k.sprp(T::from(i)) {
                 break;
             }
             if idx == (pseudos.len() - 1) {
@@ -72,11 +73,11 @@ pub(crate) fn unary_det_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> u6
 }
 
 /*
-   In: A vector of composites, An FIterator that generates bases of some form
+   In: A vector of composites, An BaseIterator that generates bases of some form
    Out: The base that eliminates all composites, Zero if no base exists
 */
 
-pub(crate) fn unary_det_iter_st<T: FInteger, F: FIterator<T>>(pseudos: &[T], iter: F) -> T {
+pub(crate) fn unary_det_iter_st<T: Natural, F: BaseIterator<T>>(pseudos: &[T], iter: F) -> T {
     for i in iter.to_vector(){
         for (idx, k) in pseudos.iter().enumerate() {
             if k.sprp(i) {
@@ -87,7 +88,7 @@ pub(crate) fn unary_det_iter_st<T: FInteger, F: FIterator<T>>(pseudos: &[T], ite
             }
         }
     }
-    return T::from_u64(0u64);
+    return T::from(0u64);
 }
 
 /*
@@ -95,11 +96,11 @@ pub(crate) fn unary_det_iter_st<T: FInteger, F: FIterator<T>>(pseudos: &[T], ite
    Out: The base that eliminates the most composites, along with the number of composites remaining
 */
 
-pub(crate) fn unary_strongest_st<T: FInteger>(pseudos: &[T],inf: u64, sup: u64) -> (u64,u64){
+pub(crate) fn unary_strongest_st<T: Natural>(pseudos: &[T],inf: u64, sup: u64) -> (u64,u64){
       let mut bound = pseudos.len() as u64; 
       let mut strongest = inf;
       for i in inf..sup{
-       let base = T::from_u64(i);
+       let base = T::from(i);
        let mut count = 0u64;
          for j in pseudos.iter(){
            if j.sprp(base){
@@ -119,7 +120,7 @@ pub(crate) fn unary_strongest_st<T: FInteger>(pseudos: &[T],inf: u64, sup: u64) 
 	 Out: The base that eliminates the most composites, along with the number of composites 
 */
 // FIXME return T base of maximum length
-pub(crate) fn unary_strongest_st_rand<T: FInteger>(pseudos: &[T],step : usize) -> (u64,u64){
+pub(crate) fn unary_strongest_st_rand<T: Natural>(pseudos: &[T],step : usize) -> (u64,u64){
       let mut bound = pseudos.len() as u64;
       	  
       let mut strongest = T::ZERO;
@@ -154,18 +155,18 @@ pub(crate) fn unary_strongest_st_rand<T: FInteger>(pseudos: &[T],step : usize) -
 }
 
 /*
-  In: A vector of composites, An FIterator that generates bases of some form
+  In: A vector of composites, An BaseIterator that generates bases of some form
   Out: The two bases that eliminate the most composites after a deterministic search
   
   Deterministic search is performed by exhaustively checking the every pair combination and 
   selecting the strongest pairing. This is extraordinarily slow, for a faster version see 
   the evolutionary search variant
 */
-pub(crate) fn binary_det_iter_st<T: FInteger, F: FIterator<T>>(pseudos: &[T], iter: F) -> (T,T) {
+pub(crate) fn binary_det_iter_st<T: Natural, F: BaseIterator<T>>(pseudos: &[T], iter: F) -> (T,T) {
     let base_set = iter.to_vector(); 
     let mut ce_count = u64::MAX;
-    let mut lhs = T::from_u64(0u64);
-    let mut rhs = T::from_u64(0u64);
+    let mut lhs = T::from(0u64);
+    let mut rhs = T::from(0u64);
     
     for i in &base_set{
      let mut interim = vec![];
@@ -207,15 +208,15 @@ pub(crate) fn binary_det_iter_st<T: FInteger, F: FIterator<T>>(pseudos: &[T], it
    pair
 */
 
-pub(crate) fn binary_evo_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> (u64,u64){
+pub(crate) fn binary_evo_st<T: Natural>(pseudos: &[T], inf: u64, sup: u64) -> (u64,u64){
    let mut strong_lhs = inf; 
-   let mut initial_pseudos = strip_pseudo_st(pseudos,T::from_u64(strong_lhs));
+   let mut initial_pseudos = strip_pseudo_st(pseudos,T::from(strong_lhs));
    
    let (mut strong_rhs,mut strong_count) =  unary_strongest_st(&initial_pseudos[..],inf,sup);
    let mut lhs = strong_rhs;
         
    for _ in 0..4{
-    let lhs_pseudos = strip_pseudo_st(pseudos,T::from_u64(lhs));
+    let lhs_pseudos = strip_pseudo_st(pseudos,T::from(lhs));
     let rhs_res = unary_strongest_st(&lhs_pseudos[..],inf,sup);
     if rhs_res.1 < strong_count{
       strong_count = rhs_res.1;
@@ -236,7 +237,7 @@ pub(crate) fn binary_evo_st<T: FInteger>(pseudos: &[T], inf: u64, sup: u64) -> (
 	FIXME 
 */
 
-pub (crate) fn binary_evo_st_rand_partial<T : FInteger>(pseudos: &[T],inf: u64,sup: u64) -> (u64,u64){
+pub (crate) fn binary_evo_st_rand_partial<T : Natural>(pseudos: &[T],inf: u64,sup: u64) -> (u64,u64){
 	
 	let mut strong_lhs = T::gen_k(64).unwrap(); 
     let mut initial_pseudos = strip_pseudo_st(pseudos,strong_lhs);

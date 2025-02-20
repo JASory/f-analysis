@@ -1,9 +1,10 @@
 use crate::io::write::format_block;
-use crate::fermat::FInteger;
+use crate::structures::store::{Storage};
+use crate::Natural;
 use std::sync::{Arc,atomic::{AtomicU64,AtomicUsize,AtomicBool,Ordering}};
 use machine_prime::is_prime_wc;
 use crate::{CompVector,cvec};
-use crate::{result::FResult,search::thread_count};
+use crate::{FResult,search::thread_count};
 
 /// Structure for hashtable primality test
 #[derive(Clone)]
@@ -13,37 +14,9 @@ pub struct HashTable {
     table: Vec<u64>,
 }
 
-impl HashTable {
+impl Storage for HashTable{
 
-    pub fn new(table: Vec<u64>, dimen: usize, multiplier: u32) -> Self {
-        HashTable {
-            table,
-            dimen,
-            multiplier,
-        }
-    }
-    
-     /// Returns dimension, multiplier, and hashvalues
-  pub fn values(&self) -> (usize,u32,Vec<u64>){
-       (self.dimen,self.multiplier,self.table.clone())
-    }
-    
-  pub fn set_idx(&mut self, val: u64, idx: usize){
-      self.table[idx]=val;
-  }
-  
-  pub fn get_idx(&self, idx: usize) -> u64{
-      self.table[idx]
-  }
-  
-  // Returns the index and the base that gets selected
-  pub fn lut_values<T: FInteger>(&self, x: T) -> (usize,u64){
-      //println!("{}",self.table.len());
-      let idx = x.hash_shift((32-self.dimen.trailing_zeros()) as usize, self.multiplier);
-      (idx,self.table[idx])
-  }
-
-    pub fn to_file(&self, locale: &str) -> FResult<()> {
+    fn to_persistent(&self, locale: &str) -> FResult<()> {
         use std::fs::File;
         use std::io::Write;
 
@@ -60,7 +33,7 @@ impl HashTable {
     }
     
     /// Fix errors
-    pub fn from_file(filename: &str) -> FResult<Self>{
+   fn from_persistent(filename: &str) -> FResult<Self>{
         use std::io::BufRead;
         
         //FIXME handle parsing error 
@@ -109,15 +82,47 @@ impl HashTable {
         }
         
     }
+
+}
+
+impl HashTable {
+
+    pub fn new(table: Vec<u64>, dimen: usize, multiplier: u32) -> Self {
+        HashTable {
+            table,
+            dimen,
+            multiplier,
+        }
+    }
     
+     /// Returns dimension, multiplier, and hashvalues
+  pub fn values(&self) -> (usize,u32,Vec<u64>){
+       (self.dimen,self.multiplier,self.table.clone())
+    }
+    
+  pub fn set_idx(&mut self, val: u64, idx: usize){
+      self.table[idx]=val;
+  }
+  
+  pub fn get_idx(&self, idx: usize) -> u64{
+      self.table[idx]
+  }
+  
+  // Returns the index and the base that gets selected
+  pub fn lut_values<T: Natural>(&self, x: T) -> (usize,u64){
+      //println!("{}",self.table.len());
+      let idx = x.hash_shift((32-self.dimen.trailing_zeros()) as usize, self.multiplier);
+      (idx,self.table[idx])
+  }
+  
     /// Evaluates primality for an integer, utilizing the hashtable computed
-    pub fn primality<T: FInteger>(&self, x: T) -> bool{
-       x.sprp(T::from_u64(self.lut_values(x).1))
+    pub fn primality<T: Natural>(&self, x: T) -> bool{
+       x.sprp(T::from(self.lut_values(x).1))
     }
     
     // FIXME Allow Composite to be a file
     /// Checks that the hashtable eliminates all composites from the vector
-    pub fn prove<T: FInteger>(&self, cvec: &CompVector<T>) -> FResult<T>{
+    pub fn prove<T: Natural>(&self, cvec: &CompVector<T>) -> FResult<T>{
          for i in cvec.to_vector().iter(){
             if self.primality(*i){
               return FResult::Failure;
@@ -127,7 +132,7 @@ impl HashTable {
     }
     
     /// FIXME Allow composite to be file
-   pub fn count_failure<T: FInteger>(&self, cvec: &CompVector<T>) -> u64{
+   pub fn count_failure<T: Natural>(&self, cvec: &CompVector<T>) -> u64{
        let mut count = 0u64;
        for i in cvec.to_vector().iter(){
          if self.primality(*i){
@@ -137,7 +142,7 @@ impl HashTable {
        count
    }
    
-  pub fn list_failure<T: FInteger>(&self, cvec: &CompVector<T>) -> CompVector<T>{
+  pub fn list_failure<T: Natural>(&self, cvec: &CompVector<T>) -> CompVector<T>{
        let mut veccy = vec![];
        for i in cvec.to_vector().iter(){
          if self.primality(*i){

@@ -1,14 +1,14 @@
-use crate::fermat::FInteger;
-use crate::result::FResult;
+use crate::Natural;
+use crate::FResult;
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Point<T: FInteger> {
+pub struct Point<T: Natural> {
     base: T,
     value: u64,
 }
 
-impl<T: FInteger> std::fmt::Display for Point<T> {
+impl<T: Natural> std::fmt::Display for Point<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -19,28 +19,28 @@ impl<T: FInteger> std::fmt::Display for Point<T> {
     }
 }
 
-impl<T: FInteger> PartialEq for Point<T> {
+impl<T: Natural> PartialEq for Point<T> {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
 }
 
-impl<T: FInteger> Eq for Point<T> {}
+impl<T: Natural> Eq for Point<T> {}
 
-impl<T: FInteger> PartialOrd for Point<T> {
+impl<T: Natural> PartialOrd for Point<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.value.cmp(&other.value))
     }
 }
 
-impl<T: FInteger> Ord for Point<T> {
+impl<T: Natural> Ord for Point<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.value.cmp(&other.value)
     }
 }
 
 
-impl<T: FInteger> Point<T> {
+impl<T: Natural> Point<T> {
     pub fn new(base: T, value: u64) -> Self {
         Self { base, value }
     }
@@ -55,12 +55,12 @@ impl<T: FInteger> Point<T> {
 }
 
 /// Data Vector for Fermat base statistics
-pub struct DataVector<T: FInteger> {
+pub struct DataVector<T: Natural> {
     sort_flag : bool,
     data: Vec<Point<T>>,
 }
 
-impl<T: FInteger> std::fmt::Display for DataVector<T> {
+impl<T: Natural> std::fmt::Display for DataVector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let v = self
             .data
@@ -72,7 +72,7 @@ impl<T: FInteger> std::fmt::Display for DataVector<T> {
     }
 }
 
-impl<T: FInteger> DataVector<T> {
+impl<T: Natural> DataVector<T> {
 
     /// Initialise from vector of Points
     pub fn new(data: Vec<Point<T>>) -> Self {
@@ -134,7 +134,7 @@ impl<T: FInteger> DataVector<T> {
           return FResult::Err("Data vectors are of different lengths");
         }
         if self.sort_flag==false || otra.sort_flag == false{
-          return FResult::Err("Both Fdata structures need to be sorted");
+          return FResult::Err("Both Data structures need to be sorted");
         }
         let mut delta = 0u64;
         for (idx,el) in self.data.iter().enumerate(){

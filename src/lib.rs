@@ -17,24 +17,20 @@
 //! - RDRAND supported, (no operations require randomness without selecting for it)
 #![allow(unused)]
 pub(crate) mod structures;
-pub(crate) mod io;
-pub(crate) mod math;
+pub(crate) mod natural;
 pub(crate) mod primes;
 pub(crate) mod car;
-pub(crate) mod compeval;
 pub(crate) mod search;
-pub(crate) mod compconfig;
+pub(crate) mod io;
+pub(crate) mod iterator;
 
-pub mod fermat;
 pub mod filter;
- mod result;
+ mod enums;
 
-pub use math::Pseudoprime;
-pub use crate::result::FResult;
-pub use crate::fermat::extended::traitimpl::Epz;
+pub use crate::enums::{Pseudoprime,FResult};
+pub use crate::natural::{Epz,Natural};
+
 pub use crate::structures::{CounterExamples,DataVector,HashTable,Primes,PrimeOrd,CompVector,BaseSeq,Interval,WieferichPrime,Constructor,PCGenerator};
-
-// https://www.reddit.com/r/cryptography/comments/zgal8n/pollard_rho_easy_explanation/
 
 /*
    Research Capability

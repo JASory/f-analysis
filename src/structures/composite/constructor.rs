@@ -1,6 +1,6 @@
-use crate::compconfig::{MEMORY_MAX,UTF8_FLAG,AUTO_FLAG};
+use crate::enums::{MEMORY_MAX,UTF8_FLAG,AUTO_FLAG};
 use crate::CompVector;
-use crate::fermat::FInteger;
+use crate::Natural;
 
 /// Convenience macro for initialising CompVectors
 ///
@@ -35,7 +35,7 @@ use crate::fermat::FInteger;
     };
  }
  
- pub struct Constructor<T: FInteger>{
+ pub struct Constructor<T: Natural>{
     mem_max : u64, 
     utf_flag: bool,
     filename: String,
@@ -44,7 +44,7 @@ use crate::fermat::FInteger;
     load_flag: bool,
  }
  
- impl<T: FInteger> Constructor<T>{
+ impl<T: Natural> Constructor<T>{
  
     pub (crate) fn new() -> Self{
        Self{

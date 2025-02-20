@@ -135,7 +135,7 @@ impl<T: PrimeValuation> PCGenerator<T>{
  fn func_eval(&self) -> Vec<u64>{
  
  }
- // Parallel evaluation of all generated 
+ // Parallel evaluation of all generated composites 
  pub fn composite_eval(&self, func: dyn)-> Vec<u64>{
  
  }

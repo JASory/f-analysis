@@ -1,30 +1,31 @@
 use crate::structures::Primes;
-use crate::fermat::{FInteger,FIterator};
+use crate::iterator::{BaseIterator};
+use crate::Natural;
 use crate::{HashTable,CompVector, WieferichPrime};
 use crate::filter::WeakFermat;
 use crate::search::{thread_count,unary_ht_par,hash_search};
 use crate::primes::SMALL_PRIMES;
 use crate::car::MRC_18;
-use crate::result::FResult;
-use crate::fermat::NTCore;
+use crate::FResult;
+use crate::natural::montcore::NTCore;
 
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize,AtomicBool,Ordering};
 use std::fs::File;
 use std::io::Write;
-use crate::compconfig::{Search,AUTO_FLAG,MEMORY_MAX,UTF8_FLAG};
+use crate::enums::{Search,AUTO_FLAG,MEMORY_MAX,UTF8_FLAG};
 
 
 /// Interval for evaluation [low;high}
 #[derive(Clone)]
-pub struct Interval<T: FInteger>{
+pub struct Interval<T: Natural>{
         inf: T,
         sup: T,
        mode: Search,
    }
 
-impl<T:FInteger> Interval<T>{
+impl<T:Natural> Interval<T>{
    
    pub fn new(inf: T, sup: T) -> Self{
 	       let (new_inf, new_sup) = inf.min_max(sup);
@@ -71,7 +72,7 @@ impl<T:FInteger> Interval<T>{
  
    /// Fermat quotients to bases of iterator
    /// This function writes to Standard Out, bases are likely to be out of sequence
-   pub fn fq_sequence<F : FIterator<u64>>(&self,iter : F) -> () {
+   pub fn fq_sequence<F : BaseIterator<u64>>(&self,iter : F) -> () {
       let x = iter.to_vector();
     
       let p_bound = self.sup.isqrt().to_u64() as usize;
@@ -151,10 +152,10 @@ impl<T:FInteger> Interval<T>{
 	   	       // Monier-Rabin Heuristic
 	   	       for i in plist.iter(){
 	   	       
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	          
 	   	          for j in [3,4,5,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -171,8 +172,8 @@ impl<T:FInteger> Interval<T>{
                } 
                 
                for i in MRC_18{
-                 if T::from_u64(i).is_bounded_by(self.inf,self.sup){
-                  out.write(&T::from_u64(i).to_bytes()[..]).unwrap();
+                 if T::from(i).is_bounded_by(self.inf,self.sup){
+                  out.write(&T::from(i).to_bytes()[..]).unwrap();
                  }
               }
             
@@ -182,7 +183,7 @@ impl<T:FInteger> Interval<T>{
                 
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..2048{
 	   	           
@@ -213,10 +214,10 @@ impl<T:FInteger> Interval<T>{
 	   	      
 	   	      for i in plist.iter(){
 	   	      
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	          
 	   	        for j in [3,4,5,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -233,8 +234,8 @@ impl<T:FInteger> Interval<T>{
               }
               
                for i in MRC_18{
-                 if T::from_u64(i).is_bounded_by(self.inf,self.sup){
-                   ce.push(T::from_u64(i))
+                 if T::from(i).is_bounded_by(self.inf,self.sup){
+                   ce.push(T::from(i))
                  }
               }
               
@@ -242,7 +243,7 @@ impl<T:FInteger> Interval<T>{
                 
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..2048{
 	   	           
@@ -429,7 +430,7 @@ impl<T:FInteger> Interval<T>{
             
                     if i.hash_shift(divisor, mul) == bucket {
                        if trial_div(i,&inner_plist[..]){
-                         if i.is_prime()!=i.sprp(T::from_u64(base)){
+                         if i.is_prime()!=i.sprp(T::from(base)){
                             inner_flag = false;
                             break 'inc;
                           }
@@ -500,10 +501,10 @@ impl<T:FInteger> Interval<T>{
 	   	       // Monier-Rabin Heuristic
 	   	       for i in plist.iter(){
 	   	       
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	          
 	   	          for j in [3,4,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -521,8 +522,8 @@ impl<T:FInteger> Interval<T>{
             }
             
              for i in MRC_18{
-                 if T::from_u64(i).is_bounded_by(self.inf,self.sup){
-                  out.write(&T::from_u64(i).to_bytes()[..]).unwrap();
+                 if T::from(i).is_bounded_by(self.inf,self.sup){
+                  out.write(&T::from(i).to_bytes()[..]).unwrap();
                  }
               }
               
@@ -532,7 +533,7 @@ impl<T:FInteger> Interval<T>{
                 
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..64{
 	   	           
@@ -564,9 +565,9 @@ impl<T:FInteger> Interval<T>{
 	   	      
 	   	      for i in plist.iter(){
 	   	      
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	        for j in [3,4,5,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -585,8 +586,8 @@ impl<T:FInteger> Interval<T>{
               
               
                for i in MRC_18{
-                 if T::from_u64(i).is_bounded_by(self.inf,self.sup){
-                   ce.push(T::from_u64(i))
+                 if T::from(i).is_bounded_by(self.inf,self.sup){
+                   ce.push(T::from(i))
                  }
               }
               
@@ -594,7 +595,7 @@ impl<T:FInteger> Interval<T>{
                 
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..64{
 	   	           
@@ -641,7 +642,7 @@ impl<T:FInteger> Interval<T>{
       
         let mut threads = vec![];
         // FIXME eliminate to_u64, Return error if beyond some bound
-        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from_u64(t_count)).0.to_u64();
+        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from(t_count)).0.to_u64();
         for i in 0..t_count {
         
         let mut start = self.inf;
@@ -701,7 +702,7 @@ impl<T:FInteger> Interval<T>{
       
         let mut threads = vec![];
         // FIXME eliminate to_u64, Return error if beyond some bound
-        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from_u64(t_count)).0.to_u64();
+        let stride = self.sup.wrapping_sub(self.inf).euclidean(T::from(t_count)).0.to_u64();
         let sf = base.small_factor();
         for i in 0..t_count {
         

@@ -1,6 +1,6 @@
-use crate::fermat::FInteger;
+use crate::Natural;
 
-pub(crate) fn read_composite_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
+pub(crate) fn read_composite_newline<T: Natural>(x: String) -> Option<Vec<T>> {
     let mut res = vec![];
     for i in x.split_whitespace() {
         match T::from_str(i) {
@@ -16,7 +16,7 @@ pub(crate) fn read_composite_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
 }
 
 #[allow(dead_code)]
-pub(crate) fn read_prime_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
+pub(crate) fn read_prime_newline<T: Natural>(x: String) -> Option<Vec<T>> {
     let mut res = vec![];
     for i in x.split_whitespace() {
         match T::from_str(i) {
@@ -31,7 +31,7 @@ pub(crate) fn read_prime_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
     Some(res)
 }
 
-pub(crate) fn read_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
+pub(crate) fn read_newline<T: Natural>(x: String) -> Option<Vec<T>> {
     let mut res = vec![];
     for i in x.split_whitespace() {
         match T::from_str(i) {
@@ -42,7 +42,7 @@ pub(crate) fn read_newline<T: FInteger>(x: String) -> Option<Vec<T>> {
     Some(res)
 }
 
-pub(crate) fn read_binary<T: FInteger>(x: Vec<u8>) -> Vec<T> {
+pub(crate) fn read_binary<T: Natural>(x: Vec<u8>) -> Vec<T> {
     let mut res = vec![];
     let stride = T::byte_length();
     for i in 0..(x.len() / stride){

@@ -1,17 +1,17 @@
 // Search functions
 use crate::structures::{Primes,Point,BaseSeq,CompVector};
-use crate::fermat::{FInteger,IntSeq,FIterator};
+use crate::iterator::{IntSeq,BaseIterator};
+use crate::Natural;
 
 use crate::{HashTable};
 use crate::filter::{StrongFermat,Coprime,GenericFilter};
 use std::io::{Read,BufRead,Write};
-use crate::compeval::{vector::*,file::*};
+use crate::structures::composite::{vector::*,file::*};
 use crate::search::{hash_search,unary_ht_par,strip_pseudo_par,strip_pseudo_st,binary_evo_st,binary_det_iter_st,binary_evo_par,binary_evo_st_rand_partial, unary_strongest_st,unary_strongest_par,unary_strongest_rand_par,exhaustive_par,exhaustive_rand_par, exhaustive_list_par, exhaustive_list_st};
-use crate::io::write::format_block;
-use crate::result::FResult;
-use crate::compconfig::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
+use crate::FResult;
+use crate::enums::{Search,AUTO_FLAG,UTF8_FLAG,MEMORY_MAX};
 
-impl<T: FInteger> CompVector<T>{
+impl<T: Natural> CompVector<T>{
 
   
 //
@@ -224,17 +224,17 @@ impl<T: FInteger> CompVector<T>{
       for i in 0..(k-1){
        let bound = 1_000;
          let (c,_) = unary_strongest_par::<T>(ce.elements.clone(),3,bound*(k as u64+1));
-         ce = ce.filter_sprp_rt(T::from_u64(c));
-         bv.append(T::from_u64(c));
+         ce = ce.filter_sprp_rt(T::from(c));
+         bv.append(T::from(c));
       }
       let x = exhaustive_par(ce.elements);
-      bv.append(T::from_u64(x));
+      bv.append(T::from(x));
       bv
   }
   
   /// Infinite search, this is short-circuiting and therefore much faster than a strongest search. However it has an unpredictable run time
   pub fn terminating_search(&self) -> FResult<BaseSeq<T>>{
-     self.load_eval(&|x: Self| FResult::Value(BaseSeq::new(vec![T::from_u64(exhaustive_par(x.elements))])))
+     self.load_eval(&|x: Self| FResult::Value(BaseSeq::new(vec![T::from(exhaustive_par(x.elements))])))
   }
   
   
@@ -245,12 +245,12 @@ impl<T: FInteger> CompVector<T>{
       while ce.len() > 100{
         let bound = 10_000_000_000u64/(ce.len() as u64);
         let (c,_) = unary_strongest_par::<T>(ce.elements.clone(),3,bound);
-         ce = ce.filter_sprp_rt(T::from_u64(c));
-         bv.append(T::from_u64(c));
+         ce = ce.filter_sprp_rt(T::from(c));
+         bv.append(T::from(c));
       }
       
       let x = exhaustive_par(ce.elements);
-      bv.append(T::from_u64(x));
+      bv.append(T::from(x));
       bv
   }
   
@@ -275,7 +275,7 @@ impl<T: FInteger> CompVector<T>{
       bv
   }
   
-  // Returns a list of bases that eliminate all the bases
+  // Returns a list of bases that eliminate all the composites
   pub fn terminating_list(&self, inf: u64, sup: u64) -> FResult<Vec<u64>> {
               let (min, max) = inf.min_max(sup);
               self.load_eval(&|x : Self| {
@@ -291,4 +291,13 @@ impl<T: FInteger> CompVector<T>{
               })
   }
 
+}
+
+impl CompVector<u64>{
+     pub fn binary_search(&self, sup: u64) -> FResult<(u64,u64)>{
+ self.load_eval_ref(&|x : &Self| {
+                let k = IntSeq::<u64>::new(Some(2),sup as usize).unwrap();
+                 FResult::Value(binary_det_iter_st::<u64,IntSeq<u64>>(&x.elements[..],k))
+              })
+ } 
 }

@@ -1,28 +1,79 @@
 use crate::structures::Primes;
-use crate::fermat::FInteger;
+use crate::Natural;
+use crate::structures::store::Storage;
 use crate::{HashTable,CompVector};
 use crate::car::MRC_18;
-use crate::result::FResult;
+use crate::FResult;
 use std::fs::File;
 use std::io::{Write,Read};
-use crate::compconfig::{Search,MEMORY_MAX,UTF8_FLAG,AUTO_FLAG};
+use crate::enums::{Search,MEMORY_MAX,UTF8_FLAG,AUTO_FLAG};
 
 
 /// Vector of Fermat bases to be evaluated as a full primality test
 #[derive(Clone,Debug)]
-pub struct BaseSeq<T: FInteger>{
+pub struct BaseSeq<T: Natural>{
    bases: Vec<T>,
    mode : Search,
 }
-/*
-/// Vector of Fermat bases to be evaluated separately
-#[derive(Clone,Debug)]
-pub struct BaseVector<T: FInteger>{
-    bases: Vec<T>,
-}
-*/
 
-impl<T: FInteger> BaseSeq<T>{
+#[macro_export]
+ macro_rules! bseq{
+    () => {
+       BaseSeq::new(vec![])
+    };
+   ( $( $x:expr ),* ) => {
+      {
+        let mut tmpvec = BaseSeq::new(vec![]);
+        $(
+          tmpvec.append($x);
+        )*
+        tmpvec
+      }
+   };
+   
+   }
+
+impl<T: Natural> Storage for BaseSeq<T>{
+    
+     fn to_persistent(&self, locale: &str) -> FResult<()>{
+        use std::fs::File;
+        use std::io::Write;
+
+        match File::create(locale) {
+            Ok(mut out) => {
+                let res = self.to_string();
+                match out.write_all(res.as_bytes()) {
+                    Ok(_) => FResult::Success,
+                    Err(message) => FResult::IOError(message),
+                }
+            }
+            Err(message) => FResult::IOError(message),
+        }
+    }
+    
+    fn from_persistent(filename: &str) -> FResult<Self>{
+    
+       match std::fs::File::open(filename){
+         Ok(mut x) => {
+            let mut buffer = String::new();
+            match x.read_to_string(&mut buffer){
+              Ok(_) => { 
+                 // FIXME Handle unwrap correctly   
+                let res = buffer.split(",")
+                          .map(|z| T::from_str(z).unwrap() )
+                          .collect::<Vec<T>>();
+                          
+                FResult::Value(Self::new(res))
+            }
+            Err(read_error) => FResult::IOError(read_error),
+         }
+       }
+        Err(file_error) => FResult::IOError(file_error),
+     } 
+    }
+}
+
+impl<T: Natural> BaseSeq<T>{
 	   
 	
    pub fn new(bases : Vec<T>) -> Self{
@@ -53,31 +104,7 @@ impl<T: FInteger> BaseSeq<T>{
       self.bases.iter()
    }
    
-   pub fn to_file(&self, filename: &str){
-     
-     match std::fs::File::create(filename){
-       Ok(mut x) => {
-        let out_string = self.to_string();
-         x.write_all(out_string.as_bytes()).unwrap();
-       }
-       Err(file_error) => panic!("Unable to write to file"),
-     }
-   }
    
-   
-   // FIXME Handle unwrap correctly
-   pub fn from_file(filename: &str) -> FResult<Self>{
-       
-       match std::fs::File::open(filename){
-         Ok(mut x) => {
-            let mut buffer = String::new();
-            x.read_to_string(&mut buffer).unwrap();
-            let str_split = buffer.split(",").map(|z| T::from_str(z).unwrap() ).collect::<Vec<T>>();
-            FResult::Value(Self::new(str_split))
-         }
-         Err(file_error) => FResult::IOError(file_error),
-       }
-   }
    
    pub fn swap(&mut self, new_value: T, idx: usize) -> Option<T>{
       if idx >= self.len(){
@@ -122,10 +149,10 @@ impl<T: FInteger> BaseSeq<T>{
 	   	       // Monier-Rabin Heuristic
 	   	       for i in plist.iter(){
 	   	       
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	          
 	   	          for j in [3,4,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -142,7 +169,7 @@ impl<T: FInteger> BaseSeq<T>{
             }
            
                for i in MRC_18{
-                 let carmichael = T::from_u64(i);
+                 let carmichael = T::from(i);
                  if carmichael.is_bounded_by(inf,sup) && self.primality(carmichael){
                   out.write(&carmichael.to_bytes()[..]).unwrap();
                  }
@@ -153,7 +180,7 @@ impl<T: FInteger> BaseSeq<T>{
               
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..64{
 	   	           
@@ -185,9 +212,9 @@ impl<T: FInteger> BaseSeq<T>{
 	   	      
 	   	      for i in plist.iter(){
 	   	      
-	   	          let lhs = T::from_u64(i);
+	   	          let lhs = T::from(i);
 	   	        for j in [3,4,6].iter(){
-                  let rhs = lhs.even_complement(T::from_u64(*j));
+                  let rhs = lhs.even_complement(T::from(*j));
        
                   if rhs.is_prime(){
                      let (prod,flag) = lhs.overflowing_mul(rhs);
@@ -204,8 +231,8 @@ impl<T: FInteger> BaseSeq<T>{
               }
               
                for i in MRC_18{
-                 if T::from_u64(i).is_bounded_by(inf,sup)&self.primality(T::from_u64(i)){
-                   ce.push(T::from_u64(i))
+                 if T::from(i).is_bounded_by(inf,sup)&self.primality(T::from(i)){
+                   ce.push(T::from(i))
                  }
               }
               
@@ -213,7 +240,7 @@ impl<T: FInteger> BaseSeq<T>{
                 
                 for i in plist.iter(){
                 
-                   let lhs = T::from_u64(i);
+                   let lhs = T::from(i);
                    
 	   	           for j in 2..64{
 	   	           
@@ -270,7 +297,7 @@ impl<T: FInteger> BaseSeq<T>{
                  let mut inner_flag = false;
            
 			   for j in self.bases.iter(){
-                 if  prod_128.sprp(u128::from_u64(*j)) == false{
+                 if  prod_128.sprp(u128::from(*j)) == false{
                       inner_flag = true;
 				     break;
                  }
@@ -326,7 +353,7 @@ impl<T: FInteger> BaseSeq<T>{
                  let mut secinner_flag = false;
            
 			   for j in self.bases.iter(){
-                 if  secprod_128.sprp(u128::from_u64(*j)) == false{
+                 if  secprod_128.sprp(u128::from(*j)) == false{
                       secinner_flag = true;
 				     break;
                  }
@@ -375,7 +402,7 @@ impl<T: FInteger> BaseSeq<T>{
    }
    
    
-   impl<T: FInteger> std::fmt::Display for BaseSeq<T> {
+   impl<T: Natural> std::fmt::Display for BaseSeq<T> {
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        let  zepto = self.bases.iter().map(|x| x.to_string()).collect::<Vec<String>>();

@@ -1,10 +1,8 @@
-use crate::fermat::FInteger;
-use crate::search::parallel::thread_count;
+use crate::{Natural,FResult};
+use crate::search::{parallel::thread_count,single::unary_det_st};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
-use crate::search::single::unary_det_st;
 use crate::structures::Primes;
-use crate::result::FResult;
 
 
 
@@ -27,7 +25,7 @@ fn gcd_check(b: u64, primes: &[u64]) -> bool {
     false
 }
 
- fn bs_unary<T:FInteger>(ce: &[T],primes: &[u64], bound: u64) -> u64{
+ fn bs_unary<T:Natural>(ce: &[T],primes: &[u64], bound: u64) -> u64{
                 let mut start = 2u64;
                 let mut c_base: u64;
                 
@@ -55,7 +53,7 @@ fn gcd_check(b: u64, primes: &[u64]) -> bool {
  }
 
 
-pub(crate) fn unary_ht_par<T: FInteger, const S: usize>(
+pub(crate) fn unary_ht_par<T: Natural, const S: usize>(
     ce: Vec<T>,
     dimen: usize,
     multiplier: u32,
@@ -218,7 +216,7 @@ pub(crate) fn unary_ht_par<T: FInteger, const S: usize>(
 	
 */
 
- fn array_bs_unary<T:FInteger, const S: usize>(ce: &[T],primes: &[u64], bound: u64) -> [u64;S]{
+ fn array_bs_unary<T:Natural, const S: usize>(ce: &[T],primes: &[u64], bound: u64) -> [u64;S]{
      	        let mut start = 2u64;
                 let mut c_base: u64;
 				

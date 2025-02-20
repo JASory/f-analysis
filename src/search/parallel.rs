@@ -1,4 +1,5 @@
-use crate::fermat::{FInteger,FIterator};
+use crate::iterator::{BaseIterator};
+use crate::Natural;
 use crate::filter::{GenericFilter};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -21,7 +22,7 @@ pub(crate) fn thread_count() -> usize {
    Out: A vector of composites pseudoprime to provided base
 */
 
-pub(crate) fn strip_pseudo_par<T: FInteger>(pseudos: Vec<T>,base: T) -> Vec<T>{
+pub(crate) fn strip_pseudo_par<T: Natural>(pseudos: Vec<T>,base: T) -> Vec<T>{
          // Number of threads
         let tc = thread_count();
          // Starting index
@@ -88,7 +89,7 @@ for handle in threads{
    In: A vector of composites, 
   Out: 
   */
-pub(crate) fn exhaustive_list_par<T: FInteger>(pseudos: Vec<T>, inf: u64, sup: u64) -> Vec<u64>{
+pub(crate) fn exhaustive_list_par<T: Natural>(pseudos: Vec<T>, inf: u64, sup: u64) -> Vec<u64>{
              let tc = thread_count();
              
              let p_arc : Arc<Vec<T>> = Arc::new(pseudos);
@@ -142,7 +143,7 @@ pub(crate) fn exhaustive_list_par<T: FInteger>(pseudos: Vec<T>, inf: u64, sup: u
      Out: Subset of bases that eliminate all the composites 
  */
     /*
- pub(crate) fn exhaustive_vec_par<T: FInteger>(pseudos: Vec<T>,base: Vec<T>) -> Vec<T>{
+ pub(crate) fn exhaustive_vec_par<T: Natural>(pseudos: Vec<T>,base: Vec<T>) -> Vec<T>{
                      let tc = thread_count();
              
              let p_arc : Arc<Vec<T>> = Arc::new(pseudos);
@@ -200,7 +201,7 @@ pub(crate) fn exhaustive_list_par<T: FInteger>(pseudos: Vec<T>, inf: u64, sup: u
    Out: A vector of composites pseudoprime to provided base
 */
 
-pub(crate) fn filter_func_par<T: FInteger>(pseudos: Vec<T>,func: &dyn Fn(T) -> bool) -> Vec<T>{
+pub(crate) fn filter_func_par<T: Natural>(pseudos: Vec<T>,func: &dyn Fn(T) -> bool) -> Vec<T>{
          // Number of threads
         let tc = thread_count();
          // Starting index
@@ -265,7 +266,7 @@ for handle in threads{
 
 */
 
-pub(crate) fn filter_par<T: FInteger,F: GenericFilter>(pseudos: Vec<T>, filter_flag: bool) -> Vec<T>{
+pub(crate) fn filter_par<T: Natural,F: GenericFilter>(pseudos: Vec<T>, filter_flag: bool) -> Vec<T>{
 
  let tc = thread_count();
  let start = 0usize;
@@ -317,7 +318,7 @@ for handle in threads{
 
 
 
-pub(crate) fn unary_strongest_par<T: FInteger>(x: Vec<T>, inf: u64, sup: u64) -> (u64,u64) {
+pub(crate) fn unary_strongest_par<T: Natural>(x: Vec<T>, inf: u64, sup: u64) -> (u64,u64) {
     let tc = thread_count();
     let mut thread_vec: Vec<std::thread::JoinHandle<()>> = Vec::new();
 
@@ -349,7 +350,7 @@ pub(crate) fn unary_strongest_par<T: FInteger>(x: Vec<T>, inf: u64, sup: u64) ->
                 }
                  //let cb = T::gen_k(64).unwrap();
                 'check: for i in ce_i.iter() {
-                    if i.sprp(T::from_u64(c_base)) {
+                    if i.sprp(T::from(c_base)) {
                         count += 1
                     }
                     // Short-circuiting, if the current base passes more composites
@@ -375,7 +376,7 @@ pub(crate) fn unary_strongest_par<T: FInteger>(x: Vec<T>, inf: u64, sup: u64) ->
     (best_base.load(Ordering::SeqCst),ce_count.load(Ordering::SeqCst))
 }
 // FIXME take the total and split across threads
-pub(crate) fn unary_strongest_rand_par<T: FInteger>(x: Vec<T>,thread_stride: u64) -> (u64,u64) {
+pub(crate) fn unary_strongest_rand_par<T: Natural>(x: Vec<T>,thread_stride: u64) -> (u64,u64) {
     let tc = thread_count();
     let mut thread_vec: Vec<std::thread::JoinHandle<()>> = Vec::new();
     
@@ -433,7 +434,7 @@ pub(crate) fn unary_strongest_rand_par<T: FInteger>(x: Vec<T>,thread_stride: u64
    
 }    
 
-pub(crate) fn exhaustive_par<T: FInteger>(x: Vec<T>) -> u64{
+pub(crate) fn exhaustive_par<T: Natural>(x: Vec<T>) -> u64{
 
      const STRIDE : u64 = 1_000_000;
      
@@ -465,7 +466,7 @@ pub(crate) fn exhaustive_par<T: FInteger>(x: Vec<T>) -> u64{
            for base in start..stop{
            
             for (idx,el) in ce_i.iter().enumerate(){
-              if el.sprp(T::from_u64(base)){
+              if el.sprp(T::from(base)){
                 break;
               }
              if idx==ce_i.len()-1{
@@ -487,7 +488,7 @@ pub(crate) fn exhaustive_par<T: FInteger>(x: Vec<T>) -> u64{
 }
 
 
-pub(crate) fn exhaustive_rand_par<T: FInteger>(x: Vec<T>) -> u64{
+pub(crate) fn exhaustive_rand_par<T: Natural>(x: Vec<T>) -> u64{
 
      const STRIDE : u64 = 1_000_000;
      
@@ -541,7 +542,7 @@ pub(crate) fn exhaustive_rand_par<T: FInteger>(x: Vec<T>) -> u64{
    Out: Vector comprising the number of pseudoprimes for each base
 */
 
-pub(crate) fn bev_sprpv<T: FInteger>(x: Vec<T>, base_vec: Vec<T>) -> Vec<u64> {
+pub(crate) fn bev_sprpv<T: Natural>(x: Vec<T>, base_vec: Vec<T>) -> Vec<u64> {
     let mut output: Vec<AtomicU64> = vec![];
     let sup = base_vec.len();
 
@@ -598,15 +599,15 @@ pub(crate) fn bev_sprpv<T: FInteger>(x: Vec<T>, base_vec: Vec<T>) -> Vec<u64> {
         .collect::<Vec<u64>>()
 }
 
-pub(crate) fn binary_evo_par<T: FInteger>(pseudos: Vec<T>, inf: u64, sup: u64) -> (u64,u64){
+pub(crate) fn binary_evo_par<T: Natural>(pseudos: Vec<T>, inf: u64, sup: u64) -> (u64,u64){
    let mut strong_lhs = inf; 
-   let mut initial_pseudos = strip_pseudo_par(pseudos.clone(),T::from_u64(strong_lhs));
+   let mut initial_pseudos = strip_pseudo_par(pseudos.clone(),T::from(strong_lhs));
    
    let (mut strong_rhs,mut strong_count) =  unary_strongest_par(initial_pseudos,inf,sup);
    let mut lhs = strong_rhs;
         
    for _ in 0..4{
-    let lhs_pseudos = strip_pseudo_par(pseudos.clone(),T::from_u64(lhs));
+    let lhs_pseudos = strip_pseudo_par(pseudos.clone(),T::from(lhs));
     let rhs_res = unary_strongest_par(lhs_pseudos,inf,sup);
     if rhs_res.1 < strong_count{
       strong_count = rhs_res.1;

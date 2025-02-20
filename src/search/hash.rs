@@ -1,5 +1,5 @@
-use crate::math::rand::rand;
-use crate::fermat::FInteger;
+use crate::natural::rand::rand;
+use crate::Natural;
 
 /*
    In : A list of integers
@@ -30,7 +30,7 @@ fn delta(x: &[u32]) -> u32 {
 */
 
 
-pub(crate) fn hash_search<T: FInteger>(ce: &[T], dimen: usize, interval: usize) -> u32 {
+pub(crate) fn hash_search<T: Natural>(ce: &[T], dimen: usize, interval: usize) -> u32 {
     // Maximum permitted delta between minimum and maximum values (i.e range of elements) 
     let mut dlt: u32 = 70000000;
 	// Multiplier initialised to zero
@@ -70,7 +70,7 @@ pub(crate) fn hash_search<T: FInteger>(ce: &[T], dimen: usize, interval: usize) 
 */
 
 
-pub(crate) fn hash_search_no_alloc<T: FInteger>(ce: &[T],dimen: usize,bound: usize) -> u32{
+pub(crate) fn hash_search_no_alloc<T: Natural>(ce: &[T],dimen: usize,bound: usize) -> u32{
 
     let divisor = (32 - dimen.trailing_zeros()) as usize;
     // Loop over bound 

@@ -117,8 +117,8 @@ pub fn filter(&self,func : &(dyn Fn(&u64) -> bool + 'static) ) -> Vec<u64>{
        }
        if sieve[(n - low) as usize]==T::BOOLEAN{
          count+=1;
-         if func(&(n-low)){
-         values.push(n-low);
+         if func(&n){
+         values.push(n);
          }
        }
        n+=2;

@@ -1,5 +1,5 @@
 use crate::filter::filtertype::*;
-use crate::filter::ftraits::{WeakFermat,EulerFermat,StrongFermat,GenericFilter};
+use crate::filter::ftraits::{EulerFermat, GenericFilter, StrongFermat, WeakFermat};
 use crate::Natural;
 
 impl<const S: usize> WeakFermat for Base<S> {
@@ -8,12 +8,11 @@ impl<const S: usize> WeakFermat for Base<S> {
     }
 }
 
-impl<const S: usize> EulerFermat for Base<S>{
-   fn efermat<T: Natural>(x: T) -> bool{
-      x.euler_jacobi(T::from(S as u64))
-   }
+impl<const S: usize> EulerFermat for Base<S> {
+    fn efermat<T: Natural>(x: T) -> bool {
+        x.euler_jacobi(T::from(S as u64))
+    }
 }
-
 
 impl<const S: usize> StrongFermat for Base<S> {
     fn sprp<T: Natural>(x: T) -> bool {
@@ -21,67 +20,64 @@ impl<const S: usize> StrongFermat for Base<S> {
     }
 }
 
-impl<const S: usize, const P : usize> WeakFermat for DBase<S,P> {
+impl<const S: usize, const P: usize> WeakFermat for DBase<S, P> {
     fn fermat<T: Natural>(x: T) -> bool {
-        if !x.fermat(T::from(S as u64)){
-           return false
+        if !x.fermat(T::from(S as u64)) {
+            return false;
         }
         x.fermat(T::from(P as u64))
     }
 }
 
-impl<const S: usize, const P: usize> EulerFermat for DBase<S,P>{
-   fn efermat<T: Natural>(x: T) -> bool{
-      if !x.euler_jacobi(T::from(S as u64)){
-           return false
+impl<const S: usize, const P: usize> EulerFermat for DBase<S, P> {
+    fn efermat<T: Natural>(x: T) -> bool {
+        if !x.euler_jacobi(T::from(S as u64)) {
+            return false;
         }
         x.euler_jacobi(T::from(P as u64))
-   }
+    }
 }
 
-
-impl<const S: usize, const P : usize> StrongFermat for DBase<S,P> {
+impl<const S: usize, const P: usize> StrongFermat for DBase<S, P> {
     fn sprp<T: Natural>(x: T) -> bool {
-    
-        if !x.sprp(T::from(S as u64)){
-           return false
+        if !x.sprp(T::from(S as u64)) {
+            return false;
         }
         x.sprp(T::from(P as u64))
     }
-    
 }
 
-impl<const S: usize, const P : usize, const Q: usize> WeakFermat for TBase<S,P,Q> {
+impl<const S: usize, const P: usize, const Q: usize> WeakFermat for TBase<S, P, Q> {
     fn fermat<T: Natural>(x: T) -> bool {
-        if !x.fermat(T::from(S as u64)){
-           return false
+        if !x.fermat(T::from(S as u64)) {
+            return false;
         }
-        if !x.fermat(T::from(P as u64)){
-           return false
+        if !x.fermat(T::from(P as u64)) {
+            return false;
         }
         x.fermat(T::from(Q as u64))
     }
 }
 
-impl<const S: usize, const P : usize, const Q: usize> EulerFermat for TBase<S,P,Q> {
+impl<const S: usize, const P: usize, const Q: usize> EulerFermat for TBase<S, P, Q> {
     fn efermat<T: Natural>(x: T) -> bool {
-        if !x.euler_jacobi(T::from(S as u64)){
-           return false
+        if !x.euler_jacobi(T::from(S as u64)) {
+            return false;
         }
-        if !x.euler_jacobi(T::from(P as u64)){
-           return false
+        if !x.euler_jacobi(T::from(P as u64)) {
+            return false;
         }
         x.euler_jacobi(T::from(Q as u64))
     }
 }
 
-impl<const S: usize, const P : usize, const Q: usize> StrongFermat for TBase<S,P,Q> {
+impl<const S: usize, const P: usize, const Q: usize> StrongFermat for TBase<S, P, Q> {
     fn sprp<T: Natural>(x: T) -> bool {
-        if !x.sprp(T::from(S as u64)){
-           return false
+        if !x.sprp(T::from(S as u64)) {
+            return false;
         }
-        if !x.sprp(T::from(P as u64)){
-           return false
+        if !x.sprp(T::from(P as u64)) {
+            return false;
         }
         x.sprp(T::from(Q as u64))
     }
@@ -199,8 +195,8 @@ impl StrongFermat for NQR {
     }
 }
 
-impl WeakFermat for EPF{
-  fn fermat<T: Natural>(x: T) -> bool{
-     x.euler_p()
-  }
+impl WeakFermat for EPF {
+    fn fermat<T: Natural>(x: T) -> bool {
+        x.euler_p()
+    }
 }

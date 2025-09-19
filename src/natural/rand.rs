@@ -8,7 +8,6 @@ pub fn drbg(mut x: u64) -> u64 {
     x.wrapping_mul(0x2545F4914F6CDD1D)
 }
 
-
 #[inline(always)]
 fn default_xor() -> u64 {
     let x = std::time::SystemTime::now()
@@ -42,7 +41,7 @@ pub(crate) fn rand() -> u64 {
     }
 }
 
-pub fn gen_k(k: u64)-> Option<u64>{
+pub fn gen_k(k: u64) -> Option<u64> {
     if k > 64 {
         return None;
     }
@@ -55,7 +54,7 @@ pub fn gen_k(k: u64)-> Option<u64>{
 
     let form = 1 << (k - 1);
     let bitlength = form - 1;
-    
+
     Some((rand() & bitlength) | form)
 }
 

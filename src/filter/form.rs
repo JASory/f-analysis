@@ -1,13 +1,11 @@
 use crate::filter::filtertype::*;
-use crate::filter::ftraits::{Coprime,FormCheck,GenericFilter};
+use crate::filter::ftraits::{Coprime, FormCheck, GenericFilter};
 use crate::Natural;
-
-
 
 impl<const S: usize> Coprime for Trial<S> {
     fn coprime<T: Natural>(x: T) -> bool {
         Self::filter_check(x)
-     }
+    }
 }
 
 impl<const S: usize> Coprime for GCD<S> {
@@ -19,8 +17,8 @@ impl<const S: usize> Coprime for GCD<S> {
 
 impl FormCheck for Square {
     fn is_form<T: Natural>(x: T) -> bool {
-       // x.is_square()
-       Self::filter_check(x)
+        // x.is_square()
+        Self::filter_check(x)
     }
 }
 
@@ -40,7 +38,7 @@ impl<const A: usize> FormCheck for Power<A> {
 
 impl<const A: usize> FormCheck for SPKA<A> {
     fn is_form<T: Natural>(x: T) -> bool {
-    /*
+        /*
         for i in 2..A {
             if x.is_semiprime_k(i) {
                 return true;

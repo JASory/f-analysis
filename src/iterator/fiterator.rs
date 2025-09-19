@@ -1,6 +1,5 @@
 use crate::Natural;
 
-
 pub trait BaseIterator<T: Natural>: Iterator {
     fn new(start: Option<T>, len: usize) -> Option<Self>
     where
@@ -61,20 +60,18 @@ pub struct IntSeq<T: Natural> {
 }
 
 #[derive(Clone, Copy)]
-pub struct IntRng<const S: usize,T: Natural> {
+pub struct IntRng<const S: usize, T: Natural> {
     start: T,
     idx: usize,
     length: usize,
 }
 
 #[derive(Clone, Copy)]
-pub struct Ideal<const S: usize,T: Natural> {
+pub struct Ideal<const S: usize, T: Natural> {
     start: T,
     idx: usize,
     length: usize,
 }
-
-
 
 impl<T: Natural> Iterator for IntSeq<T> {
     type Item = T;
@@ -90,7 +87,7 @@ impl<T: Natural> Iterator for IntSeq<T> {
     }
 }
 
-impl<const S: usize,T: Natural> Iterator for IntRng<S,T> {
+impl<const S: usize, T: Natural> Iterator for IntRng<S, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -126,15 +123,15 @@ impl<const S: usize, T: Natural> Iterator for CompRng<S, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
-        
-        loop{
-             self.start = T::comp_gen_k(S).unwrap();
-             
-          if !self.start.is_perfect_power(){
-             break;
-          }
+
+        loop {
+            self.start = T::comp_gen_k(S).unwrap();
+
+            if !self.start.is_perfect_power() {
+                break;
+            }
         }
-        
+
         if self.idx > self.length {
             return None;
         }
@@ -348,4 +345,3 @@ impl<const S: usize, T: Natural> BaseIterator<T> for IntRng<S, T> {
         base
     }
 }
-

@@ -1,5 +1,3 @@
-  
-
 /// Fermat Base
 pub struct Base<const S: usize>;
 /// Double Fermat Base
@@ -39,19 +37,19 @@ pub struct SPK<const A: usize>;
 /// All semiprimes of the form (k+1)(ak+1) where A ranges from 2 to X exclusive
 pub struct SPKA<const A: usize>;
 
-
 /// Strong Fermat test of the form SF(n,Sqrt(n/A)+1)
 pub struct SFSqr<const A: usize>;
 
 /// All integers of the form K^n,perfect powers with base K
 pub struct Power<const K: usize>;
 
-/// All perfect squares 
+/// All perfect squares
 pub struct Square;
 
-// Primes
+/// Primes
 pub struct Prime;
 
-// Composites
+/// Composites
 pub struct Composite;
 
+pub struct Verum;

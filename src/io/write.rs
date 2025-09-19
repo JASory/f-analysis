@@ -5,7 +5,10 @@ use crate::Natural;
 */
 
 pub(crate) fn write_binary<T: Natural>(x: &Vec<T>) -> Vec<u8> {
-   x.iter().map(|z| z.to_bytes()).flatten().collect::<Vec<u8>>()
+    x.iter()
+        .map(|z| z.to_bytes())
+        .flatten()
+        .collect::<Vec<u8>>()
 }
 /*
    In: Vector of 64-bit integers

@@ -1,8 +1,8 @@
 use crate::Natural;
 
 /// Trait implementing some check that returns a boolean, and the negation of that check
-pub trait GenericFilter{
-   fn filter_check<T: Natural>(x: T) -> bool;
+pub trait GenericFilter {
+    fn filter_check<T: Natural>(x: T) -> bool;
 }
 
 /// Trait implementing the a^(n-1)=1 (mod n) Fermat test

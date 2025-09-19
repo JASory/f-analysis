@@ -22,7 +22,7 @@ impl CounterExamples {
     pub fn from_vector(idx: Vec<u64>) -> Self {
         Self { idx }
     }
-    
+
     /// Read from binary
     pub fn from_file(locale: &str) -> Option<Self> {
         match std::fs::read(locale) {
@@ -66,7 +66,7 @@ impl CounterExamples {
             *i ^= j
         }
     }
-    
+
     /// Number of counterexamples detected
     pub fn count(&self) -> u64 {
         let mut sum = 0u64;

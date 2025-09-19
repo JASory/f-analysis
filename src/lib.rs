@@ -16,21 +16,26 @@
 //! - As much RAM as possible. Most operations are limited by persistent harddrive memory not RAM, however RAM is much faster
 //! - RDRAND supported, (no operations require randomness without selecting for it)
 #![allow(unused)]
-pub(crate) mod structures;
-pub(crate) mod natural;
-pub(crate) mod primes;
+
 pub(crate) mod car;
-pub(crate) mod search;
 pub(crate) mod io;
 pub(crate) mod iterator;
+pub(crate) mod natural;
+pub(crate) mod primes;
+pub(crate) mod search;
+pub(crate) mod structures;
+pub(crate) mod computation;
 
+mod enums;
 pub mod filter;
- mod enums;
 
-pub use crate::enums::{Pseudoprime,FResult};
-pub use crate::natural::{Epz,Natural};
-
-pub use crate::structures::{CounterExamples,DataVector,HashTable,Primes,PrimeOrd,CompVector,BaseSeq,Interval,WieferichPrime,Constructor,PCGenerator};
+pub use crate::enums::{FResult, Pseudoprime};
+pub use crate::natural::{Epz, Natural};
+pub use crate::computation::PsiEval;
+pub use crate::structures::{
+    store::Persistent, BaseSeq, CompVector, Constructor, CounterExamples, DataVector, HashTable,
+    Interval, PCGenerator, Primes, SOSet, SmallOrd, WieferichPrime, ResidueClass
+};
 
 /*
    Research Capability

@@ -1,5 +1,5 @@
-use crate::Natural;
 use crate::FResult;
+use crate::Natural;
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
@@ -39,7 +39,6 @@ impl<T: Natural> Ord for Point<T> {
     }
 }
 
-
 impl<T: Natural> Point<T> {
     pub fn new(base: T, value: u64) -> Self {
         Self { base, value }
@@ -56,7 +55,7 @@ impl<T: Natural> Point<T> {
 
 /// Data Vector for Fermat base statistics
 pub struct DataVector<T: Natural> {
-    sort_flag : bool,
+    sort_flag: bool,
     data: Vec<Point<T>>,
 }
 
@@ -73,10 +72,12 @@ impl<T: Natural> std::fmt::Display for DataVector<T> {
 }
 
 impl<T: Natural> DataVector<T> {
-
     /// Initialise from vector of Points
     pub fn new(data: Vec<Point<T>>) -> Self {
-        Self { sort_flag: false, data }
+        Self {
+            sort_flag: false,
+            data,
+        }
     }
     /// Length of vector
     pub fn len(&self) -> usize {
@@ -85,15 +86,15 @@ impl<T: Natural> DataVector<T> {
 
     /// Sorts by value
     pub fn sort(&mut self) {
-        if !self.sort_flag{
-           self.data.sort();
-           self.sort_flag = true;
+        if !self.sort_flag {
+            self.data.sort();
+            self.sort_flag = true;
         }
     }
 
     /// Extracts the highest datapoints
     pub fn upper_interval(&self, range: usize) -> Option<Self> {
-        if range > self.len() || self.sort_flag==false{
+        if range > self.len() || self.sort_flag == false {
             return None;
         }
         let start = self.len() - range;
@@ -102,7 +103,7 @@ impl<T: Natural> DataVector<T> {
 
     /// Extracts the lowest datapoints
     pub fn lower_interval(&self, range: usize) -> Option<Self> {
-        if range > self.len() || self.sort_flag == false{
+        if range > self.len() || self.sort_flag == false {
             return None;
         }
         return Some(Self::new(self.data[..range].to_vec()));
@@ -128,21 +129,21 @@ impl<T: Natural> DataVector<T> {
     pub fn base(&self) -> Vec<T> {
         self.data.iter().map(|x| x.base()).collect::<Vec<T>>()
     }
-     /// Algorithm improvement, weight the stronger bases more
-    pub fn sequence_stat(&self, otra: Self) -> FResult<u64>{
-        if self.data.len() != otra.data.len(){
-          return FResult::Err("Data vectors are of different lengths");
+    /// Algorithm improvement, weight the stronger bases more
+    pub fn sequence_stat(&self, otra: Self) -> FResult<u64> {
+        if self.data.len() != otra.data.len() {
+            return FResult::Err("Data vectors are of different lengths");
         }
-        if self.sort_flag==false || otra.sort_flag == false{
-          return FResult::Err("Both Data structures need to be sorted");
+        if self.sort_flag == false || otra.sort_flag == false {
+            return FResult::Err("Both Data structures need to be sorted");
         }
         let mut delta = 0u64;
-        for (idx,el) in self.data.iter().enumerate(){
-           for (jidx,jel) in otra.data.iter().enumerate(){
-               if el.base == jel.base{
-                  delta +=idx.abs_diff(jidx) as u64;
-               }
-           }
+        for (idx, el) in self.data.iter().enumerate() {
+            for (jidx, jel) in otra.data.iter().enumerate() {
+                if el.base == jel.base {
+                    delta += idx.abs_diff(jidx) as u64;
+                }
+            }
         }
         FResult::Value(delta)
     }

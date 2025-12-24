@@ -14,7 +14,8 @@ Current capability
 - Filtering by coprimality, and certain forms of semiprimes
 - Construction of fermat base hashtables, as used in [machine-prime](https://github.com/JASory/machine-prime)
 - Heuristic strong pseudoprime generation.
-- Iterative selection of bases up to a bound. (e.g picking the strongest base up to a bound, then picking the strongest base against the previous set). Combined with the heuristic prime generation this results in frequently deterministic base sets, although impractical to prove. 
+- Iterative selection of bases up to a bound. (e.g picking the strongest base up to a bound, then picking the strongest base against the previous set). Combined with the heuristic prime generation this results in frequently deterministic base sets, although impractical to prove.
+- Estimating Jaeschke's Psi function. i.e the smallest composite that passes the strong fermat test to the first k primes. 
 
 Future capability 
 - Evolutionary search of bases (probably not advantageous)

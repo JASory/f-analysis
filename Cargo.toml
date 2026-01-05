@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies.machine-prime]
 
-version = "1.3.1"
-features = ["ssmr"]
+version = "1.5.5"
+features = ["ssmr","wide","internal"]

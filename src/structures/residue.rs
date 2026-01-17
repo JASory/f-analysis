@@ -11,6 +11,10 @@ struct Signature{
   sig: Vec<u64>,
 }
 
+// non_coprime with residue of 1 
+
+// 
+
  //  
 fn nc_crt(res_1: u64, ring_1: u64, res_2: u64, ring_2: u64) -> Option<(u64,u64)>{
 
@@ -40,6 +44,8 @@ fn c_crt(res_1: u64, ring_1: u64, res_2: u64, ring_2: u64) -> u64{
     let rhs = (res_2 as u128*((inv1 as u128*ring_1 as u128)%n_ring128))%n_ring128;
     (((lhs + rhs)%n_ring128) as u64)
 }
+
+
 
 impl ResidueClass{
 
@@ -136,14 +142,15 @@ impl ResidueClass{
     (((lhs + rhs)%n_ring128) as u64)
    */
    
-   // in-place promotion
+   // in-place promotion, coprime rings are guaranteed to have solutions, 
+   // so we can simply update the vector in-place
    pub fn coprime_promote(&mut self, residue: u64, ring: u64){
      /*
         New algorithm 
         
         (g,inv1,inv2) <- EEA (ring_1,ring_2)
         New_ring <- ring_1*ring_2 
-        rhs <- res_2 * inv1*ring_1
+        rhs <- res_2 * inv1*ring_1        
         lcofactor <- inv2*ring2 
         
         loop{
@@ -170,6 +177,8 @@ impl ResidueClass{
        */
    }
    
+   
+   
    pub fn coprime_promote_par(&mut self, residue: u64, ring: u64){
        let tc = thread_count();
        let nring = ring*self.ring;
@@ -186,6 +195,7 @@ impl ResidueClass{
        }
        *self=res;
    }
+   
    // List of units to a prime [1;p-1]
    pub fn unit_prime(p: u64) -> Self{
        let mut res = vec![];

@@ -70,7 +70,8 @@ pub struct PsiEval{
      res1: ResidueClass,
      res2: ResidueClass,
      witness: BaseSeq<u64>,
-     height: u64,
+     floor : u64,
+     ceil : u64,
      index: u64,
      // Execution Mode 
    //  exec: Execution,
@@ -93,7 +94,7 @@ impl PsiEval{
       
       let ring = Epz::<3>::from(2459559130353965640u64);
       
-      let mut height = 1;
+      let mut ceil = 1;
       let mut tc : u64 = 1;
       
       if bound_search{
@@ -102,14 +103,14 @@ impl PsiEval{
 
       let bnd = bound.unwrap();
       
-      while Epz::<3>::from(height*tc)*ring < bnd{
-         height+=1;
+      while Epz::<3>::from(ceil*tc)*ring < bnd{
+         ceil+=1;
       } 
     
-      height*=tc;
-     
+      ceil*=tc;
+      let floor = 0u64;
       
-      std::fs::write(folder.to_owned()+"/height",height.to_string().as_bytes());
+      std::fs::write(folder.to_owned()+"/height",(floor.to_string()+"\n"+&ceil.to_string()).as_bytes());
       std::fs::File::create(folder.to_owned()+"/pseudoprimes");
   }
   
@@ -124,7 +125,8 @@ impl PsiEval{
               let secondary = ResidueClass::from_persistent(&(folder.to_owned()+"/secondaryresidue")).unwrap();
               let indexfile = folder.to_owned()+"/index";
               let mut idx = 0u64;
-              let height = std::fs::read_to_string(folder.to_owned()+"/height").unwrap().trim().parse::<u64>().unwrap();
+              let (floor,ceil) = load_bounds(&(folder.to_owned()+"/height")).unwrap();
+              
               if std::fs::exists(indexfile.clone()).unwrap(){
                idx= std::fs::read_to_string(indexfile).unwrap().trim().parse::<u64>().unwrap();
               }
@@ -133,7 +135,9 @@ impl PsiEval{
                res2: secondary,
                witness: witness,
                index : idx,
-               height: height,
+               floor : floor,
+               ceil: ceil,
+               //height: height,
                folder: folder.to_string(),
               });
            }
@@ -159,7 +163,7 @@ impl PsiEval{
             
        residues.coprime_promote(*el,82861);
        
-       match self.witness.mr_bound_epz_par(residues.clone(),0,self.height){
+       match self.witness.mr_bound_epz_par(residues.clone(),self.floor,self.ceil){
          FResult::NoCandidate => {std::fs::write(self.folder.clone()+"/index",idx.to_string().as_bytes());},
          FResult::Value(p) => {
                appender(&p.to_string(),&(self.folder.clone()+"/pseudoprimes"));               
@@ -183,7 +187,7 @@ impl PsiEval{
             
        residues.coprime_promote(*el,82861);
        
-       let p = self.witness.mr_semiprimes_par(&residues,0,self.height).to_string();
+       let p = self.witness.mr_semiprimes_par(&residues,self.floor,self.ceil).to_string();
        
        if p.len() != 0{
        appender(&p,&(self.folder.clone()+"/pseudoprimes"));  

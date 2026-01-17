@@ -50,13 +50,13 @@ pub trait Natural:
 
     fn overflowing_mul(&self, otra: Self) -> (Self, bool);
 
-    /// Evaluates if integer is coprime to all primes under the provided bound (exclusive)
+    /// Evaluates if integer is coprime to all primes under the provided bound provided that  (exclusive)
     fn trial_bound(&self, s: usize) -> bool;
 
     /// Is divisible by some 64-numbers
     fn div_vector(&self, divisors: &[u64]) -> bool;
 
-    /// Factors between 2 and 311
+    /// Factors between 3 and 727
     fn small_factor(&self) -> Vec<u64>;
 
     fn euclidean(&self, otra: Self) -> (Self, Self);
@@ -71,8 +71,6 @@ pub trait Natural:
     fn from_bytes(x: &[u8]) -> Self;
     /// To Little-Endian bytes
     fn to_bytes(&self) -> Vec<u8>;
-    // Initialise from string
-//    fn from_str(x: &str) -> Option<Self>;
     /// Randomly generate guaranteed composite of k-bit length
     fn comp_gen_k(k: usize) -> Option<Self>;
     /// Randomly generate guaranteed prime of k-bit length

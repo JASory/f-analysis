@@ -170,20 +170,21 @@ pub(crate) fn rem_slice(a: &mut Vec<u64>, b: &[u64]) {
 
 pub(crate) fn quo_rem_slice(a: &mut Vec<u64>, b: &[u64], q: &mut [u64]){
     let mut a0 = 0;
+    println!("plimbs : {:?} qlimbs : {:?}",a,b);
     let b0 = *b.last().unwrap();
     let b1 = b[b.len() - 2];
-    
+    println!("Initialised");
     if a.len() < b.len() {
         return;
     }
 
     let quo_len = a.len() - b.len() + 1;
-    let mut quo = vec![0; quo_len];
-
+    //let mut quo = vec![0; quo_len];
+    println!("qlen {}",quo_len);
     for j in (0..quo_len).rev() {
         let a1 = *a.last().unwrap();
         let a2 = a[a.len() - 2];
-
+        println!("q0 : ({} {} {}) {} {}",a0,a1,a2,b0,b1);
         let mut q0 = divide3by2(a0, a1, a2, b0, b1);
 
         let borrow = sub_mul(&mut a[j..], b, q0);
@@ -193,7 +194,7 @@ pub(crate) fn quo_rem_slice(a: &mut Vec<u64>, b: &[u64], q: &mut [u64]){
             add_slice(&mut a[j..], b, 0);
         }
 
-          quo[j] = q0;
+          q[j] = q0;
 
         a0 = a.pop().unwrap();
 

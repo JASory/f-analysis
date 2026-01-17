@@ -216,16 +216,16 @@ impl<const S: usize> Natural for Epz<S> {
 
     /// Randomly generate integer of k-bit length
     fn gen_k(k: usize) -> Option<Self> {
-        if k > S*8{
+        if k > S*64{
            return None;
         }
         
         let mut zeroed = Self::ZERO;
-        let length = k>>3;
+        let length = k>>6;
         for i in zeroed.limbs[0..length].iter_mut(){
             *i=rand();
         }
-        zeroed.limbs[length]=u64::gen_k(k&7).unwrap();
+        zeroed.limbs[length]=u64::gen_k(k&63).unwrap();
         
         Some(zeroed)
     }
@@ -472,13 +472,16 @@ impl<const S: usize> Natural for Epz<S> {
     /// Integer sqrt
     fn isqrt(&self) -> Self {
     
+       println!("{}",self);
+       
        let mut est = self.clone()>>((self.msb() as u32 / 2) - 1);
-
+        println!("{:?} {}",est.limbs,self.msb());
         loop {
             let s = est;
-            let t =s+*self/s; 
+            println!("s:{} {:?}",s,(*self/s).limbs);
+            let t =s+(*self/s); 
             est = t>>1;
-            
+            println!("{} {}",t,est);
             if est >= s{
                return s;
             }

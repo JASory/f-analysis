@@ -3,7 +3,7 @@ use crate::natural::montcore::NTCore;
 use crate::natural::signed::*;
 use crate::primes::{PRIME_INV_128, SMALL_PRIMES};
 use crate::{Natural, Pseudoprime};
-use machine_prime::{is_prime_128, PRIME_INV_64};
+use machine_prime::{is_prime_128};
 
 /*
     128-bit FInteger check
@@ -86,11 +86,11 @@ impl Natural for u128 {
     fn overflowing_mul(&self, otra: Self) -> (Self, bool) {
         u128::overflowing_mul(*self, otra)
     }
-
+    // FIXME Implement using the PRIME_TABLE_128
     fn trial_bound(&self, s: usize) -> bool {
         unimplemented!()
     }
-
+    
     fn small_factor(&self) -> Vec<u64> {
         let mut veccy = vec![];
 
@@ -101,7 +101,7 @@ impl Natural for u128 {
         }
         veccy
     }
-
+   // Accept an array of the form [p^-1,2^128/p]
     fn div_vector(&self, f: &[u64]) -> bool {
         for i in f.iter() {
             if *self % (*i as u128) == 0 {
@@ -129,11 +129,8 @@ impl Natural for u128 {
     fn successor(&mut self) {
         *self += 1;
     }
-
+    // FIXME Properly handle the case 2 which can only be prime (2,3)
     fn comp_gen_k(k: usize) -> Option<Self> {
-        if k > 128 {
-            return None;
-        }
         loop {
             let p = Self::gen_k(k).unwrap();
             if !p.is_prime() {
@@ -142,13 +139,10 @@ impl Natural for u128 {
         }
         None
     }
-
+    // FIXME properly handle the unwrap
     fn prime_gen_k(k: usize) -> Option<Self> {
-        if k > 128 {
-            return None;
-        }
         loop {
-            let p = Self::gen_k(k).unwrap();
+            let p = Self::gen_k(k).unwrap()|1;
             if p.is_prime() {
                 return Some(p);
             }
@@ -157,65 +151,61 @@ impl Natural for u128 {
     }
 
     fn gen_k(k: usize) -> Option<Self> {
+        if k > 128 || k < 1{
+           return None;
+        }
         if k < 65 {
             return u64::gen_k(k).map(|x| x as u128);
         }
         let lhs = u64::gen_k(64).unwrap();
         let rhs = u64::gen_k(64).unwrap();
         // FIXME ? Possible error for k = 128
-        let hi_digit = 1u128.wrapping_shl(k as u32);
-        let mask = (hi_digit - 1) | hi_digit;
-        let res = (((lhs as u128) << 64) + (rhs as u128)) & mask;
+        let hi_digit = 1u128<<(128-k as u32);
+        let mask = u128::MAX>>(128-k);
+        let res = ((((lhs as u128) << 64) + (rhs as u128)) & mask)|hi_digit;
         Some(res)
     }
 
     fn gcd(&self, other: Self) -> Self {
         let mut a = *self;
         let mut b = other;
-
+        debug_assert!(a != 0);
         if b == 0 {
             return a;
-        } else if a == 0 {
-            return b;
         }
 
-        let self_two_factor = a.trailing_zeros();
-        let other_two_factor = b.trailing_zeros();
-        let min_two_factor = std::cmp::min(self_two_factor, other_two_factor);
-        a >>= self_two_factor;
-        b >>= other_two_factor;
-        loop {
-            if b > a {
-                std::mem::swap(&mut b, &mut a);
-            }
-            a -= b;
-
-            if a == 0 {
-                return b << min_two_factor;
-            }
+        let min_two_factor = (a|b).trailing_zeros();
+        b >>= b.trailing_zeros();
+        while (a != 0) {
             a >>= a.trailing_zeros();
+            if b > a { (a,b) = (b,a); }
+            a -= b;
         }
+        b << min_two_factor
     }
 
     fn gcd_bz(&self, ring: Self) -> (Self,Self) {
         let mut gcd: Self = *self;
         let mut new_r: Self = ring;
-        let mut bezout_1: Signed<Self> = Signed(true, 1);
-        let mut new_s: Signed<Self> = Signed(true, 0);
+        let mut bezout_1: Self = 1;
+        let mut new_s: Self = 0;
 
         while new_r != 0 {
             let quotient = gcd / new_r;
             let mut temp_r: Self = new_r;
-            let prod = quotient * temp_r;
+            let prod = quotient.wrapping_mul(temp_r);
 
             new_r = gcd - prod;
             gcd = temp_r;
 
             let mut temp = new_s;
-            new_s = Signed::sub(bezout_1, Signed::prod(temp, quotient));
+            new_s = bezout_1.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_1 = temp;
         }
-        (gcd,Signed::residue(bezout_1, ring))
+        if bezout_1 > 1u128<<127{
+          bezout_1=ring.wrapping_add(bezout_1);
+        }
+        (gcd,bezout_1) 
     }
     
     fn mul_inverse(&self, ring: Self) -> Option<Self>{
@@ -246,32 +236,35 @@ impl Natural for u128 {
     fn extended_gcd(&self, other: Self) -> (Self, Self, Self) {
         let mut gcd: Self = *self;
         let mut new_r: Self = other;
-        let mut bezout_1: Signed<Self> = Signed(true, 1);
-        let mut new_s: Signed<Self> = Signed(true, 0);
-        let mut bezout_2: Signed<Self> = Signed(true, 0);
-        let mut new_t: Signed<Self> = Signed(true, 1);
-
+        let mut bezout_1: Self = 1;
+        let mut new_s: Self = 0;
+        let mut bezout_2 : Self = 0;
+        let mut new_t = 1;
+        
         while new_r != 0 {
             let quotient = gcd / new_r;
             let mut temp_r: Self = new_r;
-            let prod = quotient * temp_r;
+            let prod = quotient.wrapping_mul(temp_r);
 
             new_r = gcd - prod;
             gcd = temp_r;
 
             let mut temp = new_s;
-            new_s = Signed::sub(bezout_1, Signed::prod(temp, quotient));
+            new_s = bezout_1.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_1 = temp;
-
+            
             temp = new_t;
-            new_t = Signed::sub(bezout_2, Signed::prod(temp, quotient));
+            new_t =bezout_2.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_2 = temp;
+
         }
-        (
-            gcd,
-            Signed::residue(bezout_1, other),
-            Signed::residue(bezout_2, *self),
-        )
+        if bezout_1 > 1u128<<127{
+          bezout_1=other.wrapping_add(bezout_1);
+        }
+        if bezout_2 > 1u128<<127{
+          bezout_2=self.wrapping_add(bezout_2);
+        }
+        (gcd,bezout_1,bezout_2)
     }
 
     fn jacobi(&self, other: Self) -> i8 {
@@ -535,7 +528,7 @@ impl Natural for u128 {
         let inv = self.inv_2();
         for (idx, el) in fctr.factors.iter().enumerate() {
             for _ in 0..fctr.powers[idx] {
-                if base.mont_pow(one, pminus / *el, *self, inv) == one {
+                if base.mont_pow(one, pminus / *el, inv,*self) == one {
                     pminus = pminus / *el;
                 } else {
                     break;
@@ -567,7 +560,7 @@ impl Natural for u128 {
             let mut ord = pminus;
             for (idx, el) in fctr.factors.iter().enumerate() {
                 for _ in 0..fctr.powers[idx] {
-                    if base.mont_pow(one, ord / *el, *self, inv) == one {
+                    if base.mont_pow(one, ord / *el, inv,*self) == one {
                         ord = ord / *el;
                     } else {
                         break;

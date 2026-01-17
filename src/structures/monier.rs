@@ -1,6 +1,6 @@
 use std::slice::Iter;
 use std::iter::Map;
-use crate::Natural;
+use crate::{Natural,Epz};
 
 // Reduced memory representation of semiprimes pq such that p= 2x+1 q=4x+1
 pub struct MonierSemiprime<T: Natural>{
@@ -41,7 +41,7 @@ impl std::fmt::Display for MonierSemiprime<u64>{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
      for rhs in self.q_iter(){
          let lhs = (rhs>>1)+1;
-         write!(f,"{}*{}\n",lhs,rhs)?
+         write!(f,"{}\n",lhs as u128 * *rhs as u128)?
      }
        Ok(())
   }
@@ -50,8 +50,9 @@ impl std::fmt::Display for MonierSemiprime<u64>{
 impl std::fmt::Display for MonierSemiprime<u128>{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
      for rhs in self.q_iter(){
-         let lhs = (rhs>>1)+1;
-         write!(f,"{}*{}\n",lhs,rhs)?
+         let lhs = Epz::<4>::from((rhs>>1)+1);
+         
+         write!(f,"{}\n",lhs*Epz::<4>::from(*rhs))?
      }
        Ok(())
   }

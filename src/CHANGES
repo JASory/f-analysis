@@ -1,62 +1,94 @@
 CHANGES to make
-
- Rename FInteger to Natural
-  Make From<u64> a SuperTrait
   Possibly make all arithmetic a supertrait
   
 Somehow encode the wordlength and whether or not it is utf8 into the file
 
 Handle thread failures unstead of unwrapping
 
-Eliminate all possible panics
-
-
-Implement factorisation and multiplicative orders (ord and p_ord)
-
-Fix Erastothenes sieve (this previously worked not sure why it doesn't now)
-
 Finish Extended Precision
 
 Parallelise reading and processing files
 Parallelise writing to files
 
-
-Calculating the Classify function
-
-  Composite
-  Weak
-  Euler
-  Euler-Jacobi
-  Strong
-  Prime
-  
-  
-  Implement a Storable trait
-  
-  Storeable
-  
-   to_file()
-   from_file()
+Parallelise calculating mulords (weight it by size)
+  Determine the interval that would be roughly equivalent in computation
+    split the interval into t sections 
+    
+ Priority High
    
+   Handle thread errors instead of panicking
+   Eliminate all panics except in initialising Compvector constructor
+   Eliminate all unwraps
    
-   Reorganise
-
-  math/arithmetic 
-    eightbytes
-    sixteenbytes
-    rand
-    factorisation
-    EPZ
-    Natural trait
-  Structures
-   CompVector
-   BaseVector
-   BaseSeq
-   PrimeOrd
-   Interval
+   Implement Epz
    
-  Search Arithmetic
+   Implement Pinch's algorithm for Fermat pseudoprimes
+   Implement function filtering of compvectors
+   Implement LucasV filtering
+   
+   Given some integer calculate how many liars it has.
+   
+ Priority Low
+   Configure the Cfile to store the byte-dimension and/or utf8
+ 
+ 
+ Priority Extreme
+  Implement MontCore to provide montgomery arithmetic functions and routines only for the datatype
   
-  Iterators
-  Filters
+  Implement Natural to wrap these functions into properly branching for exponentiation
   
+  Branching for exponentiation 
+  
+    Check the montgomery arithmetic 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ Rewrite IO to reduce code duplication
+ 
+ Implement Persistent for as many structs as possible
+ 
+ 
+ 
+ 
+ 
+ 
+  Generalised Pinch Odd-only
+  
+    set a midway point Mp = sqrt(n)
+    
+    factor b^k-1 and b^k+1 to the highest practical bound B
+    
+     Calculate the ord(a,n) for n > B && n < Mp
+         
+ 
+   Generalised Pinch algorithm 
+   
+     Generalised from R.G.E. Pinch's algorithm for base-2 pseudoprimes
+     
+     Set a  midway point (e.g Mp = sqrt(n)
+    Factor b^k-1 to the highest practical bound collect the prime factors that are greater than Mp.
+    Set this bound at B.
+    
+    Calculate the ord_b(p) for all P < Mp
+    Small factors 
+    Given a p, all the possible cofactors to produce a pseudoprime are of the form x*ordb(p)+p^-1
+    
+    For some orders greater than B calculate b^k mod n == 1
+    
+    
+    
+    
+    Heuristic value
+    
+    For i in witness set if i < 10000 calculate the quadratic residues
+    
+    calculate crt set until the residue classes are too large
+    
+    Parallelisation
+    
+    
+    

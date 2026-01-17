@@ -44,7 +44,7 @@ pub(crate) static WHEEL : [u64;480] = [
 #[rustfmt::skip]
 pub(crate) static PRIME_INV_64: [u64; 256] = [
     
-        0xaaaaaaaaaaaaaaab ,   0xcccccccccccccccd ,   0x6db6db6db6db6db7 ,   0x2e8ba2e8ba2e8ba3 ,
+       0xaaaaaaaaaaaaaaab ,   0xcccccccccccccccd ,   0x6db6db6db6db6db7 ,   0x2e8ba2e8ba2e8ba3 ,
 	   0x4ec4ec4ec4ec4ec5 ,   0xf0f0f0f0f0f0f0f1 ,   0x86bca1af286bca1b ,   0xd37a6f4de9bd37a7 ,
 	   0x34f72c234f72c235 ,   0xef7bdef7bdef7bdf ,   0x14c1bacf914c1bad ,   0x8f9c18f9c18f9c19 ,
 	   0x82fa0be82fa0be83 ,   0x51b3bea3677d46cf ,   0x21cfb2b78c13521d ,   0xcbeea4e1a08ad8f3 ,

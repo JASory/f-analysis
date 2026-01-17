@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use crate::search::thread_count;
 use std::sync::{atomic::{Ordering,AtomicU64,AtomicBool},Arc};
+//use num_bigint::BigUint;
 
 
 /// Vector of Fermat bases to be evaluated sequentially as a full primality test
@@ -346,7 +347,7 @@ impl BaseSeq<u64> {
         }
         
         if rhs < 1<<65{
-           if (self.bases[0] as u128).exp_unit(lhs-1,rhs){
+           if !(self.bases[0] as u128).exp_unit(lhs-1,rhs){
               return false;
            }
            let prod = lhs*rhs;
@@ -374,7 +375,43 @@ impl BaseSeq<u64> {
         }
         return true;
     }
-   } 
+   }
+   /*
+   pub fn check_external(&self, lhs: u128, rhs: u128) -> bool{
+   
+     fn check_mpz_external(b: u64, lhs: u128, rhs: u128) -> bool{
+       let r = BigUint::from(rhs);
+       let l = BigUint::from(lhs);
+       let base =  BigUint::from(b);
+       let prod = r*l;
+       let one = BigUint::from(1u64);
+       let oneinv = prod.clone()-one.clone();
+       let two = BigUint::from(2u64);
+       let tzc = oneinv.trailing_zeros().unwrap();
+       let d = oneinv.clone()>>tzc;
+       let mut x = base.modpow(&d,&prod);
+       
+       if x == one || x == oneinv{
+          return true;
+       }
+       
+       for i in 1..tzc{
+           x = x.modpow(&two,&prod);
+           if x == oneinv{
+             return true;
+           }
+       }
+       return false
+   }
+   
+   for i in self.bases.iter(){
+      if !check_mpz_external(*i,lhs,rhs){
+         return false;
+      }
+   }
+   return true;
+  }
+  */
     // Searches for the first composite by successively checking integers 
     pub fn exhaustive_bound(&self) -> FResult<u128>{
            let mut start = 4;
@@ -724,7 +761,7 @@ impl BaseSeq<u64> {
        residues
     }
     
-    // Quadratic Classes such that 
+    // Quadratic Classes such that the bases are primes, this only selects the primes in a set
   pub fn quadratic_residues_prime(&self, start: usize, stop: usize, memory_max: u64) -> ResidueClass{
          debug_assert!(stop > start);
       // Modify to branch for the case of base 2 and set the residue class to 1 mod 8

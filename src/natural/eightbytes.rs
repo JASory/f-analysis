@@ -2,11 +2,11 @@ use crate::natural::signed::*;
 use crate::natural::{
     factor::{factorize, Factorization},
     montcore::NTCore,
-    rand::{comp_gen_k, gen_k, prime_gen_k},
+    rand::{comp_gen_k, rand, prime_gen_k},
 };
 use crate::primes::{PRIME_INV_128, SMALL_PRIMES};
 use crate::{Natural, Pseudoprime};
-use machine_prime::PRIME_INV_64;
+use machine_prime::PRIME_TABLE;
 
 impl Natural for u64 {
     const ONE: u64 = 1;
@@ -93,25 +93,17 @@ impl Natural for u64 {
             return false;
         }
 
-        if s > 64 {
-            panic!("Function not defined for prime bound > 64")
+        if s > 128 {
+            panic!("Function not defined for prime bound > 128")
         }
-
-        if *self < 0x5A2553748E42E8 {
-            for i in PRIME_INV_64[..s].iter() {
-                if self.wrapping_mul(*i) < *self {
-                    return false;
-                }
-            }
-            return true;
-        } else if *self >= 0x5A2553748E42E8 {
-            for i in PRIME_INV_128[..s].iter() {
-                if ((*self as u128).wrapping_mul(*i)) < *self as u128 {
-                    return false;
-                }
-            }
+        
+        for i in 0..(s-1){
+          // FIXME possibly faster indexing by incrementing by 2
+           let prod = self.wrapping_mul(PRIME_TABLE[2*i]);
+           if prod <= PRIME_TABLE[2*i+1]{
+              return prod==1;
+           }
         }
-
         return true;
     }
 
@@ -125,7 +117,7 @@ impl Natural for u64 {
         }
         veccy
     }
-
+    // FIXME Replace with PRIMETABLE for 
     fn div_vector(&self, f: &[u64]) -> bool {
         for i in f.iter() {
             if *self % *i == 0 {
@@ -148,52 +140,62 @@ impl Natural for u64 {
     }
 
     fn comp_gen_k(k: usize) -> Option<Self> {
-        comp_gen_k(k as u64)
+        if k == 0 || k > 64{
+           return None;
+        }
+        let hi_bit = (1<<(k-1));
+        loop{
+          let p = (rand()&(u64::MAX>>(64-k)))|hi_bit;
+          if !p.is_prime(){
+             return Some(p);
+          }
+        }
     }
 
     fn prime_gen_k(k: usize) -> Option<Self> {
-        prime_gen_k(k as u64)
+        if k == 0 || k > 64{
+           return None;
+        }
+        // Sets the top bit and last bit to restrict it to an odd integer of k-bit length
+        let hi_lowbits = (1<<(k-1))|1;
+        loop{
+          let p = (rand()&(u64::MAX>>(64-k)))|hi_lowbits;
+          if p.is_prime(){
+             return Some(p);
+          }
+        }
     }
 
     fn gen_k(k: usize) -> Option<Self> {
-        gen_k(k as u64)
+       if k == 0 || k > 64{
+          return None;
+       } 
+       let hibit = 1<<(k-1);
+       let lowbits = rand()&(u64::MAX>>(64-k));
+       Some(lowbits|hibit)
     }
 
     fn gcd(&self, other: Self) -> Self {
         let mut a = *self;
         let mut b = other;
-
+        // Handle the case where a = 0 outside this function, most applications should have no use for it
+        debug_assert!(a !=0);
         if b == 0 {
             return a;
-        } else if a == 0 {
-            return b;
-        }
-
-        let self_two_factor = a.trailing_zeros();
-        let other_two_factor = b.trailing_zeros();
-        let min_two_factor = std::cmp::min(self_two_factor, other_two_factor);
-        a >>= self_two_factor;
-        b >>= other_two_factor;
-        loop {
-            if b > a {
-                std::mem::swap(&mut b, &mut a);
-            }
-            a -= b;
-
-            if a == 0 {
-                return b << min_two_factor;
-            }
+           }
+        
+        let min_two_factor = (a | b).trailing_zeros();
+        b >>= b.trailing_zeros();
+        while (a != 0) {
             a >>= a.trailing_zeros();
+            if b > a { (a,b) = (b,a); }
+            a -= b;
         }
+        b << min_two_factor
     }
 
     fn lcm(&self, otra: Self) -> Option<Self> {
-        let g = self.gcd(otra);
-        let (res, flag) = self.overflowing_mul(otra / g);
-        if flag {
-            return None;
-        }
-        Some(res)
+        self.checked_mul(otra/self.gcd(otra))
     }
 
     fn product_residue(&self, other: &Self, n: &Self) -> Self {
@@ -206,53 +208,59 @@ impl Natural for u64 {
     fn extended_gcd(&self, other: Self) -> (Self, Self, Self) {
         let mut gcd: Self = *self;
         let mut new_r: Self = other;
-        let mut bezout_1: Signed<Self> = Signed(true, 1);
-        let mut new_s: Signed<Self> = Signed(true, 0);
-        let mut bezout_2: Signed<Self> = Signed(true, 0);
-        let mut new_t: Signed<Self> = Signed(true, 1);
-
+        let mut bezout_1: Self = 1;
+        let mut new_s: Self = 0;
+        let mut bezout_2 : Self = 0;
+        let mut new_t = 1;
+        
         while new_r != 0 {
             let quotient = gcd / new_r;
             let mut temp_r: Self = new_r;
-            let prod = quotient * temp_r;
+            let prod = quotient.wrapping_mul(temp_r);
 
             new_r = gcd - prod;
             gcd = temp_r;
 
             let mut temp = new_s;
-            new_s = Signed::sub(bezout_1, Signed::prod(temp, quotient));
+            new_s = bezout_1.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_1 = temp;
-
+            
             temp = new_t;
-            new_t = Signed::sub(bezout_2, Signed::prod(temp, quotient));
+            new_t =bezout_2.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_2 = temp;
-        }
-        (
-            gcd,
-            Signed::residue(bezout_1, other),
-            Signed::residue(bezout_2, *self),
-        )
-    }
 
+        }
+        if bezout_1 > 1u64<<63{
+          bezout_1=other.wrapping_add(bezout_1);
+        }
+        if bezout_2 > 1u64<<63{
+          bezout_2=self.wrapping_add(bezout_2);
+        }
+        (gcd,bezout_1,bezout_2)
+    }
+    // Used for coprime CRT as well as mul-inverse
     fn gcd_bz(&self, ring: Self) -> (Self,Self) {
         let mut gcd: Self = *self;
         let mut new_r: Self = ring;
-        let mut bezout_1: Signed<Self> = Signed(true, 1);
-        let mut new_s: Signed<Self> = Signed(true, 0);
+        let mut bezout_1: Self = 1;
+        let mut new_s: Self = 0;
 
         while new_r != 0 {
             let quotient = gcd / new_r;
             let mut temp_r: Self = new_r;
-            let prod = quotient * temp_r;
+            let prod = quotient.wrapping_mul(temp_r);
 
             new_r = gcd - prod;
             gcd = temp_r;
 
             let mut temp = new_s;
-            new_s = Signed::sub(bezout_1, Signed::prod(temp, quotient));
+            new_s = bezout_1.wrapping_sub(temp.wrapping_mul(quotient));
             bezout_1 = temp;
         }
-        (gcd,Signed::residue(bezout_1, ring))
+        if bezout_1 > 1u64<<63{
+          bezout_1=ring.wrapping_add(bezout_1);
+        }
+        (gcd,bezout_1)        
     }
     
     fn mul_inverse(&self, ring: Self) -> Option<Self>{
@@ -302,19 +310,19 @@ impl Natural for u64 {
         let inv = machine_prime::mul_inv2(*self);
         let pminus = self.wrapping_sub(1);
         let tzc = pminus.trailing_zeros();
-        let d = pminus.wrapping_shr(tzc);
+        let d = pminus>>tzc;
         let one = machine_prime::one_mont(*self);
         let oneinv = self.wrapping_sub(one);
         let b = machine_prime::to_mont(a, *self);
 
-        let mut mbase = machine_prime::mont_pow(b, one, d, *self, inv);
+        let mut mbase = machine_prime::mont_pow(b, one, d, inv,*self);
 
         if mbase == one || mbase == oneinv {
             return Pseudoprime::Strong;
         }
 
         for i in 1..tzc {
-            mbase = machine_prime::mont_prod(mbase, mbase, *self, inv);
+            mbase = machine_prime::mont_prod(mbase, mbase, inv ,*self);
             if mbase == oneinv {
                 return Pseudoprime::Strong;
             }
@@ -328,7 +336,7 @@ impl Natural for u64 {
                 }
             }
         }
-        let mbase = machine_prime::mont_prod(mbase, mbase, *self, inv);
+        let mbase = machine_prime::mont_prod(mbase, mbase, inv,*self);
 
         if mbase == one {
             return Pseudoprime::Fermat;
@@ -356,7 +364,8 @@ impl Natural for u64 {
         NTCore::fermat(self, a)
     }
 
-    // Odd-only semifermat
+    // Odd-only semifermat, this is not efficient
+    // Calculating the inverses takes too long
     fn semi_fermat(&self, x: Self, y: Self) -> bool {
         let prod = x as u128 * y as u128;
         let (_, xinv, yinv) = x.extended_gcd(y);
@@ -367,7 +376,8 @@ impl Natural for u64 {
         // if prod > 1u128<<64 {
         //    return
         // }
-        return true;
+        //return true;
+        unimplemented!()
     }
 
     fn sqr_fermat(&self, base: Self) -> bool {
@@ -385,8 +395,9 @@ impl Natural for u64 {
     fn exp_unit(&self, p: Self, n: Self) -> bool {
         self.exp_one(p, n)
     }
-
+    // counts the number of fermat and strong fermat pseudoprimes to N, minus the trivial case of 1
     fn pseudoprime_count(&self) -> (Self, Self) {
+        // decompose x-1 into d*2^k
         let decomp = |x: Self| -> (u32, Self) {
             let xminus = x - 1;
             let twofactor = xminus.trailing_zeros();
@@ -410,9 +421,9 @@ impl Natural for u64 {
             }
             fermatprod *= xminus.gcd(*i - 1);
         }
-
+        // Omit 1 since we aren't interested in it
         fermatprod -= 1;
-
+        // If self is even then the number of pseudoprimes is identical
         if *self & 1 == 0 {
             return (fermatprod, fermatprod);
         }
@@ -435,7 +446,7 @@ impl Natural for u64 {
         let denom = 2u64.pow(m) - 1;
         let numer = 2u64.pow(m * mine) - 1;
         let multiplicand = (numer / denom) + 1;
-
+         
         (fermatprod, strongprod * multiplicand - 1)
     }
 
@@ -514,8 +525,8 @@ impl Natural for u64 {
         }
         return false;
     }
-
-    fn isqrt(&self) -> Self {
+    // FIXME replace with the new isqrt
+    fn isqrt(&self) -> Self { 
         let mut est = (*self as f64).sqrt() as u64 + 1;
 
         loop {
@@ -605,7 +616,7 @@ impl Natural for u64 {
 
             let mut m = p - 1;
             for i in fctr.pair_iter() {
-                for _ in 0..*i.1 {
+                for _ in 0..*i.1 { // FIXME Replace with exp_unit ?
                     if a.exp_residue(m / *i.0, p) == 1 {
                         m = m / *i.0;
                     } else {
@@ -625,18 +636,18 @@ impl Natural for u64 {
             let mut ord: Self;
             if *i.0 == 2 {
                 ord = ord_2(*self, *i.1 as u64);
-            } else {
+            } else { // calculate the initial prime-order
                 ord = p_ord(*self, *i.0);
-                if *i.1 > 1 {
+                if *i.1 > 1 { // if n contains a perfect power then calculate the power of the prime-order
                     ord = pp_ord(*self, ord, *i.0, *i.1 as u32);
                 }
-            }
+            }// Ord_a(n) is always less than n so this never overflows
             fullord = fullord.lcm(ord).unwrap();
         }
         Some(fullord)
     }
 
-    // Multiplicative order for P and some A guaranteed to be coprime to P
+    // Multiplicative order for some prime P and some A guaranteed to be coprime to P
     // P= 2 is not supported. This is to be handled separately
     fn p_ord(&self, a: Self) -> Self {
         let mut pminus = *self - 1;
@@ -646,7 +657,8 @@ impl Natural for u64 {
         let inv = self.inv_2();
         for (idx, el) in fctr.factors.iter().enumerate() {
             for _ in 0..fctr.powers[idx] {
-                if base.mont_pow(one, pminus / *el, *self, inv) == one {
+            // FIXME Replace with exp_one ?
+                if base.mont_pow(one, pminus / *el, inv,*self) == one {
                     pminus = pminus / *el;
                 } else {
                     break;
@@ -655,12 +667,13 @@ impl Natural for u64 {
         }
         pminus
     }
-    // Returns order and the signature (the largest factor of 2 dividing the order)
+    // Returns order and the signature (the largest factor of 2 dividing the order) of a prime
     fn signature(&self, a: Self) -> Option<(Self, u32)> {
         let ord = self.p_ord(a);
         Some((ord, ord.trailing_zeros()))
     }
-
+    
+    // Signature set to a set of bases
     fn signature_v(&self, base: &[Self]) -> Option<(Self, Vec<u32>)> {
         for i in base {
             if self.gcd(*i) > 1 {
@@ -678,7 +691,7 @@ impl Natural for u64 {
             let mut ord = pminus;
             for (idx, el) in fctr.factors.iter().enumerate() {
                 for _ in 0..fctr.powers[idx] {
-                    if base.mont_pow(one, ord / *el, *self, inv) == one {
+                    if base.mont_pow(one, ord / *el, inv,*self) == one {
                         ord = ord / *el;
                     } else {
                         break;

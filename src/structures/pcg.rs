@@ -17,6 +17,7 @@ fn identity(x: &u64) -> bool {
     true
 }
 
+// This will probably never be used, residue classes are generally faster
 /// Generates either primes or odd composites
 pub struct PCGenerator<T: PrimeValuation> {
     sup: u64,

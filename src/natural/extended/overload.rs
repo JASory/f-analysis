@@ -38,23 +38,7 @@ impl<const S: usize> ShlAssign<u32> for Epz<S> {
 // FIXME
 impl<const S: usize> ShrAssign<u32> for Epz<S> {
     fn shr_assign(&mut self, shift: u32) {
-        let mut carry = 0u64;
-        let offset = (shift >> 6) as usize;
-
-        let shift = shift & 63;
-
-        debug_assert!(offset < S);
-
-        if offset >= S {
-            *self = Self::ZERO;
-        } else {
-            for i in 0..(S - offset) {
-                self.limbs.swap(S - offset - i - 1, S - i - 1);
-            }
-
-            let carry = shr_slice(&mut self.limbs[..], shift, 0u64);
-        }
-        debug_assert!(carry == 0)
+       *self = *self>>shift;
     }
 }
 
@@ -70,9 +54,28 @@ impl<const S: usize> Shl<u32> for Epz<S> {
 impl<const S: usize> Shr<u32> for Epz<S> {
     type Output = Self;
     fn shr(self, shift: u32) -> Self::Output {
-        let mut clonus = self;
-        clonus >>= shift;
-        clonus
+        let mut res = Self::ZERO;
+        
+        let offset = (shift >> 6) as usize;
+
+        let shift = shift & 63;
+
+        debug_assert!(offset < S);
+        
+        let lastidx = S-1;
+        
+        for i in 0..(S-offset){
+          res.limbs[lastidx-offset-i]=self.limbs[lastidx-i];
+        }
+        
+        let carry = shr_slice(&mut res.limbs[..], shift, 0u64);
+        
+        debug_assert!(carry==0);
+        
+        res
+        //let mut clonus = self;
+        //clonus >>= shift;
+        //clonus
     }
 }
 
@@ -206,8 +209,15 @@ impl<const S: usize> Div for Epz<S> {
     type Output = Self;
     fn div(self, other: Self) -> Self {
         let mut zero = Self::ZERO;
-        let k = self.clone();
-        quo_rem_slice(&mut k.limbs.to_vec(), &other.limbs[..], &mut zero.limbs[..]);
+        let mut k = self.clone();
+        let mut ring = other.clone();
+        let shift = leading_digit(&k.limbs).leading_zeros();
+        let leading_k = leading_idx(&k.limbs);
+        let leading_ring = leading_idx(&ring.limbs);
+        shl_slice(&mut ring.limbs[..], shift, 0);
+        let carry = shl_slice(&mut k.limbs[..], shift, 0);
+        println!("ring : {}",ring);
+        quo_rem_slice(&mut k.limbs[..leading_k+1].to_vec(), &ring.limbs[..leading_ring+1], &mut zero.limbs[..]);
         zero
     }
 }
@@ -278,21 +288,3 @@ impl<const S: usize> Epz<S> {
     }
 }
 
-/*
-impl<const S: usize> std::str::FromStr for Epz<S>{
-        type Err = FResult<u64>;
-    fn from_str(x : &str) -> Result<Self,Self::Err>{
-        let str_length = (x.len() as f64/(2f64.log10()*64f64)).ceil() as usize;
-        if str_length > S{
-           return Err(FResult::Success);
-        }
-
-        let dglen = x.len()/18;
-        // Allocate x.len()/18 array
-        let digit_array = vec![0u64;dglen];
-
-         return Ok(Self::ZERO);
-    }
-
-}
-*/

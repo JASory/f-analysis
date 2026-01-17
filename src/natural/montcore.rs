@@ -7,11 +7,11 @@ pub(crate) trait NTCore : PartialEq + Sized {
 
     fn inv_2_neg(&self) -> Self;
 
-    fn mont_prod(&self, y: Self, n: Self, npi: Self) -> Self;
+    fn mont_prod(&self, y: Self, inv: Self, n: Self) -> Self;
 
-    fn mont_sqr(&self, n: Self, npi: Self) -> Self;
+    fn mont_sqr(&self, inv: Self, n: Self) -> Self;
 
-    fn to_z(&self, n: Self, npi: Self) -> Self;
+    fn to_z(&self, inv: Self, n: Self) -> Self;
 
     fn n_identity(&self) -> Self;
     // 2 in Montgomery form
@@ -22,7 +22,7 @@ pub(crate) trait NTCore : PartialEq + Sized {
 
     fn to_mont(&self, n: Self) -> Self;
 
-    fn mont_pow(&self, one: Self, p: Self, n: Self, npi: Self) -> Self;
+    fn mont_pow(&self, one: Self, p: Self, inv: Self, n: Self) -> Self;
 
     fn sprp(&self, base: Self) -> bool;
 
@@ -93,31 +93,31 @@ impl NTCore for u64 {
         inv.wrapping_neg()
     }
 
-    fn mont_prod(&self, y: Self, n: Self, npi: Self) -> Self {
-        machine_prime::mont_prod(*self, y, n, npi)
+    fn mont_prod(&self, y: Self, inv: Self, n: Self) -> Self {
+        machine_prime::mont_prod(*self, y, inv, n)
     }
 
-    fn mont_sqr(&self, n: Self, npi: Self) -> Self {
-        self.mont_prod(*self, n, npi)
+    fn mont_sqr(&self, inv: Self, n: Self) -> Self {
+        self.mont_prod(*self, inv, n)
     }
 
-    fn to_z(&self, n: Self, npi: Self) -> Self {
-        let lo = self.wrapping_mul(npi);
+    fn to_z(&self, inv: Self, n: Self) -> Self {
+        let lo = self.wrapping_mul(inv);
         let lo = ((lo as u128).wrapping_mul(n as u128) >> 64) as u64;
 
         lo.wrapping_neg().wrapping_add(n)
     }
 
-    fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
-        machine_prime::mont_pow(*self, one, p, n, npi)
+    fn mont_pow(&self, mut one: Self, mut p: Self, inv: Self, n: Self) -> Self {
+        machine_prime::mont_pow(*self, one, p, inv, n)
     }
 
     fn odd_exp_residue(&self, p: Self, n: Self) -> Self {
         let one = n.n_identity();
         let base = self.to_mont(n);
-        let npi = n.inv_2();
+        let inv = n.inv_2();
 
-        base.mont_pow(one, p, n, npi).to_z(n, npi)
+        base.mont_pow(one, p, inv, n).to_z(inv, n)
     }
 
     fn even_exp_residue(&self, p: Self, n: Self) -> Self {
@@ -132,7 +132,7 @@ impl NTCore for u64 {
             } else {
                 z = base.wrapping_mul(z) & n;
                 base = base.wrapping_mul(base) & n;
-                pow = (pow - 1) >> 1
+                pow>>=1;
             }
         }
         base.wrapping_mul(z) & n
@@ -160,15 +160,15 @@ impl NTCore for u64 {
 
     fn odd_fermat(&self, base: Self) -> bool {
         let one = self.n_identity();
-        let npi = self.inv_2();
+        let inv = self.inv_2();
         let p = self.wrapping_sub(1) >> 1;
         let b = base.to_mont(*self);
         let oneinv = self.one_inverse_n(one);
-        let res = b.mont_pow(one, p, *self, npi);
+        let res = b.mont_pow(one, p, inv,*self);
         if res == one || res == oneinv {
             return true;
         }
-        if res.mont_prod(res, *self, npi) == one {
+        if res.mont_prod(res, inv,*self) == one {
             return true;
         }
         false
@@ -178,15 +178,15 @@ impl NTCore for u64 {
     fn p_sq_fermat(&self, p: Self) -> bool {
         let n = p.wrapping_mul(p);
         let one = n.n_identity();
-        let npi = n.inv_2();
+        let inv = n.inv_2();
         let p = p.wrapping_sub(1) >> 1;
         let b = self.to_mont(n);
         let oneinv = n.one_inverse_n(one);
-        let res = b.mont_pow(one, p, n, npi);
+        let res = b.mont_pow(one, p, inv, n);
         if res == one || res == oneinv {
             return true;
         }
-        if res.mont_prod(res, n, npi) == one {
+        if res.mont_prod(res, inv, n) == one {
             return true;
         }
         false
@@ -211,10 +211,10 @@ impl NTCore for u64 {
         let twofactor = p_minus.trailing_zeros();
         let mut d = p_minus >> twofactor;
 
-        let npi = self.inv_2();
+        let inv = self.inv_2();
         let one = self.n_identity();
         let mut result = base.to_mont(*self);
-        result = result.mont_pow(one, d, *self, npi);
+        result = result.mont_pow(one, d, inv,*self);
         let oneinv = self.one_inverse_n(one);
 
         if result == one || result == oneinv {
@@ -222,7 +222,7 @@ impl NTCore for u64 {
         }
 
         for _ in 1..twofactor {
-            result = result.mont_sqr(*self, npi);
+            result = result.mont_sqr(inv,*self);
 
             if result == oneinv {
                 return true;
@@ -238,14 +238,14 @@ impl NTCore for u64 {
         twofactor: u32,
         one: Self,
         oneinv: Self,
-        npi: Self,
+        inv: Self,
     ) -> bool {
-        let mut x = b.mont_pow(one, d, *self, npi);
+        let mut x = b.mont_pow(one, d, inv,*self);
         if x == one || x == oneinv {
             return true;
         }
         for _ in 1..twofactor {
-            x = x.mont_sqr(*self, npi);
+            x = x.mont_sqr(inv,*self);
 
             if x == oneinv {
                 return true;
@@ -263,21 +263,21 @@ impl NTCore for u64 {
         if tzc < 2 {
             let ring = n >> tzc;
             let one = ring.n_identity();
-            let npi = ring.inv_2();
+            let inv = ring.inv_2();
             let b = self.to_mont(ring);
             let oneinv = ring.one_inverse_n(one);
             if p & 1 == 0 {
-                let res = b.mont_pow(one, p >> 1, ring, npi);
+                let res = b.mont_pow(one, p >> 1, inv,ring);
 
                 if res == one || res == oneinv {
                     return true;
                 }
-                if res.mont_prod(res, ring, npi) == one {
+                if res.mont_prod(res, inv,ring) == one {
                     return true;
                 }
                 return false;
             } else {
-                let res = b.mont_pow(one, p, ring, npi);
+                let res = b.mont_pow(one, p, inv ,ring);
                 if res == one {
                     return true;
                 }
@@ -293,16 +293,16 @@ impl NTCore for u64 {
     fn special_sf(&self, p: Self, n: Self) -> bool{
         let zeroes = p.trailing_zeros();
         let d = p>>zeroes;
-        let npi = n.inv_2();
+        let inv = n.inv_2();
         let one = n.n_identity();
         let b = self.to_mont(n);
-        let mut x = b.mont_pow(one, d, n, npi);
+        let mut x = b.mont_pow(one, d, inv,n);
         let oneinv = n.one_inverse_n(one);
         if x == one || x == oneinv {
             return true;
         }
         for _ in 1..zeroes {
-            x = x.mont_sqr(n, npi);
+            x = x.mont_sqr(inv,n);
 
             if x == oneinv {
                 return true;
@@ -359,51 +359,37 @@ impl NTCore for u128 {
         machine_prime::to_mont_128(*self, n)
     }
 
-    fn mont_prod(&self, y: Self, n: Self, npi: Self) -> Self {
-        machine_prime::mont_prod_128(*self, y, n, npi)
+    fn mont_prod(&self, y: Self, inv: Self, n: Self) -> Self {
+        machine_prime::mont_prod_128(*self, y, inv, n)
     }
 
-    fn mont_sqr(&self, n: Self, npi: Self) -> Self {
-        machine_prime::mont_sqr_128(*self, n, npi)
+    fn mont_sqr(&self, inv: Self, n: Self) -> Self {
+        machine_prime::mont_sqr_128(*self, inv, n)
     }
 
-    fn to_z(&self, n: Self, npi: Self) -> Self {
-        let lo = self.wrapping_mul(npi);
-        let lo = machine_prime::u256prod_lo(lo, n);
+    fn to_z(&self, inv: Self, n: Self) -> Self {
+        let lo = self.wrapping_mul(inv);
+        let lo = machine_prime::u256prod_hi(lo, n);
 
         lo.wrapping_neg().wrapping_add(n)
     }
 
-    fn mont_pow(&self, mut one: Self, mut p: Self, n: Self, npi: Self) -> Self {
-        /*let mut base = *self;
-
-        while p > 1 {
-            if p & 1 == 0 {
-                base = base.mont_sqr(n, npi);
-                p >>= 1;
-            } else {
-                one = base.mont_prod(one, n, npi);
-                base = base.mont_sqr(n, npi);
-                p = (p - 1) >> 1
-            }
-        }
-        base.mont_prod(one, n, npi)
-        */
-        machine_prime::mont_pow_128(*self,one,p,n,npi)
+    fn mont_pow(&self, one: Self, p: Self, inv: Self, n: Self) -> Self {
+        machine_prime::mont_pow_128(*self,one,p,inv,n)
     }
 
     fn odd_fermat(&self, base: Self) -> bool {
         let one = self.n_identity();
-        let npi = self.inv_2();
+        let inv = self.inv_2();
         let p = self.wrapping_sub(1) >> 1;
         let b = base.to_mont(*self);
         let oneinv = self.one_inverse_n(one);
-        let res = b.mont_pow(one, p, *self, npi);
+        let res = b.mont_pow(one, p, inv,*self);
         if res == one || res == oneinv {
             return true;
         }
 
-        if res.mont_sqr(*self, npi) == one {
+        if res.mont_sqr(inv,*self) == one {
             return true;
         }
         false
@@ -419,19 +405,19 @@ impl NTCore for u128 {
             let ring = n >> tzc;
             let one = ring.n_identity();
             let oneinv = ring.one_inverse_n(one);
-            let npi = ring.inv_2();
+            let inv = ring.inv_2();
             let b = self.to_mont(ring);
             if p & 1 == 0 {
-                let res = b.mont_pow(one, p >> 1, ring, npi);
+                let res = b.mont_pow(one, p >> 1, inv,ring);
                 if res == one || res == oneinv {
                     return true;
                 }
-                if res.mont_sqr(ring, npi) == one {
+                if res.mont_sqr(inv,ring) == one {
                     return true;
                 }
                 return false;
             } else {
-                if b.mont_pow(one, p, ring, npi) == one {
+                if b.mont_pow(one, p, inv,ring) == one {
                     return true;
                 }
                 return false;
@@ -447,15 +433,15 @@ impl NTCore for u128 {
     fn p_sq_fermat(&self, p: Self) -> bool {
         let n = p.wrapping_mul(p);
         let one = n.n_identity();
-        let npi = n.inv_2();
+        let inv = n.inv_2();
         let p = p.wrapping_sub(1) >> 1;
         let b = self.to_mont(n);
         let oneinv = n.one_inverse_n(one);
-        let res = b.mont_pow(one, p, n, npi);
+        let res = b.mont_pow(one, p, inv,n);
         if res == one || res == oneinv {
             return true;
         }
-        if res.mont_sqr(n, npi) == one {
+        if res.mont_sqr(inv,n) == one {
             return true;
         }
         false
@@ -463,13 +449,12 @@ impl NTCore for u128 {
 
     fn odd_exp_residue(&self, p: Self, n: Self) -> Self {
         let base = (self%n).to_mont(n);
-        let npi = n.inv_2();
+        let inv = n.inv_2();
         let one = n.n_identity();
-        base.mont_pow(one, p, n, npi).to_z(n, npi)
+        base.mont_pow(one, p, inv, n).to_z(inv, n)
     }
 
     fn even_exp_residue(&self, p: Self, mask: Self) -> Self {
-     //   let n = (1 << twofactor) - 1;
         let mut z = 1;
         let mut base = *self;
         let mut pow = p;
@@ -481,7 +466,7 @@ impl NTCore for u128 {
             } else {
                 z = base.wrapping_mul(z) & mask;
                 base = base.wrapping_mul(base) & mask;
-                pow = (pow - 1) >> 1
+                pow >>=1;
             }
         }
         base.wrapping_mul(z) & mask
@@ -522,17 +507,17 @@ impl NTCore for u128 {
         let zeroes = p_minus.trailing_zeros();
         let d = p_minus >> zeroes;
 
-        let npi = self.inv_2();
+        let inv = self.inv_2();
         let one = self.n_identity();
         let b = base.to_mont(*self);
-        let mut x = b.mont_pow(one, d, *self, npi);
+        let mut x = b.mont_pow(one, d, inv,*self);
         let oneinv = self.one_inverse_n(one);
         //println!("one {} oneinv {} bmont {} pow{}",one,oneinv,b,x);
         if x == one || x == oneinv {
             return true;
         }
         for _ in 1..zeroes {
-            x = x.mont_sqr(*self, npi);
+            x = x.mont_sqr(inv,*self);
 
             if x == oneinv {
                 return true;
@@ -548,14 +533,14 @@ impl NTCore for u128 {
         twofactor: u32,
         one: Self,
         oneinv: Self,
-        npi: Self,
+        inv: Self,
     ) -> bool {
-        let mut x = b.mont_pow(one, d, *self, npi);
+        let mut x = b.mont_pow(one, d, inv,*self);
         if x == one || x == oneinv {
             return true;
         }
         for _ in 1..twofactor {
-            x = x.mont_sqr(*self, npi);
+            x = x.mont_sqr(inv,*self);
 
             if x == oneinv {
                 return true;
@@ -566,16 +551,16 @@ impl NTCore for u128 {
     fn special_sf(&self, p: Self, n: Self) -> bool{
         let zeroes = p.trailing_zeros();
         let d = p>>zeroes;
-        let npi = n.inv_2();
+        let inv = n.inv_2();
         let one = n.n_identity();
         let b = self.to_mont(n);
-        let mut x = b.mont_pow(one, d, n, npi);
+        let mut x = b.mont_pow(one, d, inv,n);
         let oneinv = n.one_inverse_n(one);
         if x == one || x == oneinv {
             return true;
         }
         for _ in 1..zeroes {
-            x = x.mont_sqr(n, npi);
+            x = x.mont_sqr(inv,n);
 
             if x == oneinv {
                 return true;

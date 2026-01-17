@@ -48,8 +48,8 @@ impl<T: Natural> std::fmt::Display for Factorization<T> {
     }
 }
 
-const fn poly_eval(x: u64, subtrahend: u64, n: u64, npi: u64) -> u64 {
-    machine_prime::mont_sub(machine_prime::mont_prod(x, x, n, npi), subtrahend, n)
+const fn poly_eval(x: u64, subtrahend: u64, inv: u64, n: u64) -> u64 {
+    machine_prime::mont_sub(machine_prime::mont_prod(x, x, inv, n), subtrahend, n)
 }
 
 fn pollard_brent(base: u64, inv: u64, subtrahend: u64, n: u64) -> Option<u64> {
@@ -70,7 +70,7 @@ fn pollard_brent(base: u64, inv: u64, subtrahend: u64, n: u64) -> Option<u64> {
 
         while yloop < r {
             yloop += 1;
-            y = poly_eval(y, subtrahend, n, inv);
+            y = poly_eval(y, subtrahend, inv,n);
         }
 
         let mut k = 0;
@@ -83,8 +83,8 @@ fn pollard_brent(base: u64, inv: u64, subtrahend: u64, n: u64) -> Option<u64> {
                     break;
                 }
 
-                y = poly_eval(y, subtrahend, n, inv);
-                q = machine_prime::mont_prod(q, x.abs_diff(y), n, inv);
+                y = poly_eval(y, subtrahend, inv,n);
+                q = machine_prime::mont_prod(q, x.abs_diff(y), inv, n);
                 i += 1;
             } // end loop
 
@@ -104,7 +104,7 @@ fn pollard_brent(base: u64, inv: u64, subtrahend: u64, n: u64) -> Option<u64> {
 
     if g == n {
         while g == 1 {
-            ys = poly_eval(ys, subtrahend, n, inv);
+            ys = poly_eval(ys, subtrahend, inv,n);
             g = x.abs_diff(ys).gcd(n);
         }
     }
@@ -215,8 +215,8 @@ pub fn factorize(mut n: u64) -> Factorization<u64> {
     t
 }
 
-const fn poly_eval_128(x: u128, subtrahend: u128, n: u128, npi: u128) -> u128 {
-    machine_prime::mont_sub_128(machine_prime::mont_sqr_128(x, n, npi), subtrahend, n)
+const fn poly_eval_128(x: u128, subtrahend: u128, inv: u128, n: u128) -> u128 {
+    machine_prime::mont_sub_128(machine_prime::mont_sqr_128(x, inv,n), subtrahend, n)
 }
 
 fn pollard_brent_128(base: u128, inv: u128, subtrahend: u128, n: u128) -> Option<u128> {
@@ -237,7 +237,7 @@ fn pollard_brent_128(base: u128, inv: u128, subtrahend: u128, n: u128) -> Option
 
         while yloop < r {
             yloop += 1;
-            y = poly_eval_128(y, subtrahend, n, inv);
+            y = poly_eval_128(y, subtrahend, inv,n);
         }
 
         let mut k = 0;
@@ -250,8 +250,8 @@ fn pollard_brent_128(base: u128, inv: u128, subtrahend: u128, n: u128) -> Option
                     break;
                 }
 
-                y = poly_eval_128(y, subtrahend, n, inv);
-                q = machine_prime::mont_prod_128(q, x.abs_diff(y), n, inv);
+                y = poly_eval_128(y, subtrahend, inv,n);
+                q = machine_prime::mont_prod_128(q, x.abs_diff(y), inv,n);
                 i += 1;
             } // end loop
 
@@ -271,7 +271,7 @@ fn pollard_brent_128(base: u128, inv: u128, subtrahend: u128, n: u128) -> Option
 
     if g == n {
         while g == 1 {
-            ys = poly_eval_128(ys, subtrahend, n, inv);
+            ys = poly_eval_128(ys, subtrahend, inv,n);
             g = x.abs_diff(ys).gcd(n);
         }
     }

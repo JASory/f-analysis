@@ -12,7 +12,7 @@ Current capability
 - Computing fermat pseudoprimes to any base within 2;2^64. Note that computing pseudoprimes in intervals greater than 10^12 is impractical
 - Filtering by Euler-Jacobi, Strong Fermat, and first non-quadratic base.
 - Filtering by coprimality, and certain forms of semiprimes
-- Construction of fermat base hashtables, as used in [machine-prime](https://github.com/JASory/machine-prime)
+- Construction of fermat base hashtables, which are used in the fastest 64-bit primality provers [machine-prime](https://github.com/JASory/machine-prime), and FLINT
 - Heuristic strong pseudoprime generation.
 - Iterative selection of bases up to a bound. (e.g picking the strongest base up to a bound, then picking the strongest base against the previous set). Combined with the heuristic prime generation this results in frequently deterministic base sets, although impractical to prove.
 - Estimating Jaeschke's Psi function. i.e the smallest composite that passes the strong fermat test to the first k primes. 

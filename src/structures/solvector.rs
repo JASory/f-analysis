@@ -19,8 +19,6 @@ fn variance(x: &[f64]) -> f64{
    let n = x.len() as f64;
    sumsqr/n - (sum/n).powi(2)
 }
-/**/
-//mean of x^2 - (mean of x)^2
 
 impl<T: Natural> SolVector<T>{
 
@@ -95,7 +93,9 @@ impl<T: Natural> SolVector<T>{
       }
       Self::new(v)
   }
-  
+    // Randomly generate a multiplier 
+    // Partition according to that multiplier summing up the solution ratios
+    // select the array with the minimum variance (i.e the multiplier that most evenly partitions the pseudoprimes by solution strength)
   pub fn hash_search(&self, dimen: usize, iterations: usize) -> u32{
       let shift = (((1<<32)/dimen).trailing_zeros()+1) as usize ;
       let mut minvariance = f64::MAX;
@@ -117,14 +117,6 @@ impl<T: Natural> SolVector<T>{
      }
      return minmultiplier
   }
-  
-  /*
-  pub fn stats(&self) -> Stats<T>{
-     for i in self.iter(){
-        
-     }
-  }
-  */
   
   pub fn solution_stat(&self) -> Stats<f64>{
        let mut min = f64::MAX;
@@ -150,10 +142,6 @@ impl<T: Natural> SolVector<T>{
       Stats::new(min,max,mean,sumsqr/n - mean.powi(2))
        
   }
-  
-    // Randomly generate a multiplier 
-    // Partition according to that multiplier summing up the solution ratios
-    // select the array with the minimum variance
 }
 
 
@@ -189,7 +177,7 @@ impl<T: Natural> Persistent for SolVector<T>{
         use std::fs::File;
         use std::io::Read;
           let mut res = vec![];
-          //println!("Called from persistent");
+        
         match File::open(locale) {
             Ok(mut out) => {
                 let mut r = std::io::BufReader::new(out);
@@ -203,7 +191,7 @@ impl<T: Natural> Persistent for SolVector<T>{
                      if totalbytes == 0{
                         break; // FIXME throw error since we must finish reading a float
                         }
-                        pair.0=T::from_bytes(&interim);//res.push(u64::from_bytes(&interim));
+                        pair.0=T::from_bytes(&interim);
                      }
                    Err(message) => return FResult::IOError(message),
                 }
@@ -222,7 +210,7 @@ impl<T: Natural> Persistent for SolVector<T>{
                }
                return FResult::Value(Self::new(res))
                }
-             Err(message) => {println!("failed with {}",message);return FResult::IOError(message);},  
+             Err(message) => {return FResult::IOError(message);},  
               } 
       }
 

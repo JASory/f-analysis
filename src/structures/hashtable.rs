@@ -111,7 +111,6 @@ impl HashTable {
 
     // Returns the index and the base that gets selected
     pub fn lut_values<T: Natural>(&self, x: T) -> (usize, u64) {
-        //println!("{}",self.table.len());
         let idx = x.hash_shift((32 - self.dimen.trailing_zeros()) as usize, self.multiplier);
         (idx, self.table[idx])
     }

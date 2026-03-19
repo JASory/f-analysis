@@ -1,5 +1,5 @@
 use crate::natural::extended::{sliceops::{div_slice, leading_idx, scale_slice},muldiv::quo_rem_slice};
-use crate::natural::{factor::Factorization,signed::Signed,rand::rand};
+use crate::natural::{factor::Factorization,rand::rand,finite::FiniteArith};
 use crate::{Natural, Pseudoprime};
 
 /// Extended Precision Integer (Zahl)
@@ -73,9 +73,9 @@ impl<const S: usize> Natural for Epz<S> {
         self.mul_mod(*other,*n)
     }
 
-    fn wrapping_sub(&self, otra: Self) -> Self {
-        *self - otra
-    }
+  //  fn wrapping_sub(&self, otra: Self) -> Self {
+  //      *self - otra
+  //  }
 
     fn is_even(&self) -> bool {
         self.limbs[0] & 1 == 0
@@ -127,7 +127,11 @@ impl<const S: usize> Natural for Epz<S> {
         unimplemented!()
     }
 
-    fn is_semiprime_k(&self, a: usize) -> bool {
+    fn is_spk(&self, p: u64, q: u64) -> bool {
+        unimplemented!()
+    }
+    
+    fn is_spkh(&self, p: u64, q: u64) -> bool {
         unimplemented!()
     }
 
@@ -248,7 +252,7 @@ impl<const S: usize> Natural for Epz<S> {
         a
     }
     
-    fn gcd_bz(&self, ring: Self) -> (Self,Self){
+    fn gcd_bz(&self, ring: Self) -> (Self,Self){/*
         let mut gcd: Self = *self;
         let mut new_r: Self = ring;
         let mut bezout_1: Signed<Self> = Signed(true, Self::ONE);
@@ -267,6 +271,8 @@ impl<const S: usize> Natural for Epz<S> {
             bezout_1 = temp;
         }
         (gcd,Signed::residue(bezout_1, ring))
+        */
+        unimplemented!()
     }
     
     // FIXME handle multiplicative overflow
@@ -279,7 +285,7 @@ impl<const S: usize> Natural for Epz<S> {
     }
 
     ///  Finite ring gcd
-    fn extended_gcd(&self, ring: Self) -> (Self, Self, Self) {
+    fn extended_gcd(&self, ring: Self) -> (Self, Self, Self) {/*
         let mut gcd: Self = *self;
         let mut new_r: Self = ring;
         let mut bezout_1: Signed<Self> = Signed(true, Self::ONE);
@@ -305,7 +311,8 @@ impl<const S: usize> Natural for Epz<S> {
             bezout_1 = temp;
         }
         (gcd,Signed::residue(bezout_1, ring),Signed::residue(bezout_2,ring))
-
+       */
+       unimplemented!()
     }
 
     fn mul_inverse(&self, ring: Self) -> Option<Self> {
@@ -344,10 +351,13 @@ impl<const S: usize> Natural for Epz<S> {
         unimplemented!()
     }
 
-    fn pseudoprime_count(&self) -> (Self, Self) {
+    fn fermat_solution_count(&self) -> (Self, Self) {
         unimplemented!()
     }
 
+    fn fermat_solution_ratio(&self) -> (f64, f64) {
+        unimplemented!()
+    }
     ///
     fn semi_fermat(&self, p: Self, q: Self) -> bool {
         unimplemented!()
@@ -503,6 +513,10 @@ impl<const S: usize> Natural for Epz<S> {
     }
 
     fn factor(&self) -> Option<Factorization<Self>> {
+        unimplemented!()
+    }
+    
+    fn spk_factor(&self) -> Option<Factorization<Self>>{
         unimplemented!()
     }
 

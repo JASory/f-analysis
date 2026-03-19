@@ -1,9 +1,9 @@
 use crate::natural::factor::{factorize_128, Factorization};
 use crate::natural::montcore::NTCore;
-use crate::natural::signed::*;
-use crate::primes::{PRIME_INV_128, SMALL_PRIMES};
+use crate::primes::{SMALL_PRIMES};
+use crate::data::SQRTINV;
 use crate::{Natural, Pseudoprime};
-use machine_prime::{is_prime_128};
+use machine_prime::{is_prime_128,PRIME_TABLE_128};
 
 /*
     128-bit FInteger check
@@ -47,9 +47,9 @@ impl Natural for u128 {
         (*self, otra)
     }
 
-    fn wrapping_sub(&self, otra: Self) -> Self {
-        u128::wrapping_sub(*self, otra)
-    }
+    //fn wrapping_sub(&self, otra: Self) -> Self {
+    //    u128::wrapping_sub(*self, otra)
+    //}
 
     fn byte_length() -> usize {
         16usize
@@ -63,15 +63,26 @@ impl Natural for u128 {
         ((*self as u32).wrapping_mul(multiplier) >> shift) as usize
     }
 
-    fn is_semiprime_k(&self, a: usize) -> bool {
-        let fctr = a as u128;
-        let sq = (*self - 1) / fctr;
+    fn is_spkh(&self, p: u64, q: u64) -> bool {
+        let fctr = (p*q) as u128;
+        let sq = *self/ fctr;
         let k = sq.isqrt();
 
-        if ((k * k + k) * fctr + k + 1) == *self {
+        if ((p as u128) * k + 1) * ((q as u128) * k + 1) == *self {
             return true;
         }
-
+        return false;
+    }
+    
+    fn is_spk(&self, p: u64, q: u64) -> bool {
+        let fctr = (p*q) as u128;
+        let sq = *self/ fctr;
+        let k = sq.isqrt();
+        let lhs = (p as u128) * k + 1;
+        let rhs = (q as u128) * k + 1;
+        if lhs * rhs == *self && lhs.is_prime() && rhs.is_prime(){
+            return true;
+        }
         return false;
     }
 
@@ -88,7 +99,20 @@ impl Natural for u128 {
     }
     // FIXME Implement using the PRIME_TABLE_128
     fn trial_bound(&self, s: usize) -> bool {
-        unimplemented!()
+        if self&1==0{
+           return false;
+        }
+        if s > 129{
+          panic!("Only supported up to the 129-th prime")
+        }
+        for i in 0..(s-1){
+          // FIXME possibly faster indexing by incrementing by 2
+           let prod = self.wrapping_mul(PRIME_TABLE_128[2*i]);
+           if prod <= PRIME_TABLE_128[2*i+1]{
+              return prod==1;
+           }
+        }
+        return true;
     }
     
     fn small_factor(&self) -> Vec<u64> {
@@ -332,7 +356,7 @@ impl Natural for u128 {
         self.exp_one(p, n)
     }
 
-    fn pseudoprime_count(&self) -> (Self, Self) {
+    fn fermat_solution_count(&self) -> (Self, Self) {
         let decomp = |x: Self| -> (u32, Self) {
             let xminus = x - 1;
             let twofactor = xminus.trailing_zeros();
@@ -340,10 +364,15 @@ impl Natural for u128 {
         };
 
         if self.is_prime() {
-            return (0, 0);
+            return (*self-1, *self-1);
         }
-
-        let fctr = self.factor().unwrap();
+        
+        let mut fctr = Factorization::new();
+        
+         match self.spk_factor(){
+            Some(semiprimes) => fctr=semiprimes,
+            None => fctr = self.factor().unwrap(),
+         }
 
         let xminus = (*self - 1);
 
@@ -356,8 +385,6 @@ impl Natural for u128 {
             }
             fermatprod *= xminus.gcd(*i - 1);
         }
-
-        fermatprod -= 1;
 
         if *self & 1 == 0 {
             return (fermatprod, fermatprod);
@@ -382,7 +409,62 @@ impl Natural for u128 {
         let numer = 2u128.pow(m * mine) - 1;
         let multiplicand = (numer / denom) + 1;
 
-        (fermatprod, strongprod * multiplicand - 1)
+        (fermatprod, strongprod * multiplicand)
+    }
+    
+    fn fermat_solution_ratio(&self) -> (f64,f64){
+       let decomp = |x: Self| -> (u32, Self) {
+            let xminus = x - 1;
+            let twofactor = xminus.trailing_zeros();
+            (twofactor, xminus >> twofactor)
+        };
+        
+        if self.is_prime() {
+            return (1f64, 1f64);
+        }
+
+        let xminus = (*self - 1);
+
+        let mut fermatprod = 1;
+        
+        let mut phi = 1;
+        
+        let mut fctr = Factorization::new();
+        
+         match self.spk_factor(){
+            Some(semiprimes) => fctr=semiprimes,
+            None => fctr = self.factor().unwrap(),
+         }
+        
+        
+        for i in fctr.factors.iter() {
+            // when x \in 2Z then skip 2
+            if *i == 2 {
+                continue;
+            }
+            phi*=(i-1);
+            fermatprod *= xminus.gcd(*i - 1);
+        }
+ 
+        let mut strongprod = 1;
+        let m = fctr.factors.len() as u32;
+        let mut mine = 128;
+        let (xe, xd) = decomp(*self);
+        
+        for p in fctr.factors.iter() {
+            let (pe, pd) = decomp(*p);
+            if pe < mine {
+                mine = pe;
+            }
+            strongprod *= xd.gcd(pd);
+        }
+
+        let denom = 2u128.pow(m) - 1;
+        let numer = 2u128.pow(m * mine) - 1;
+        let multiplicand = (numer / denom) + 1;
+        strongprod*=multiplicand;
+        let phifloat = phi as f64;
+        (fermatprod as f64/phifloat,strongprod as f64/phifloat)
     }
 
     fn euler_jacobi(&self, a: Self) -> bool {
@@ -512,6 +594,55 @@ impl Natural for u128 {
 
     fn factor(&self) -> Option<Factorization<Self>> {
         Some(factorize_128(*self))
+    }
+    
+    fn spk_factor(&self) -> Option<Factorization<Self>>{
+       // If x < 2^103 then we can fairly reliably attempt to factor using floating-point 
+       // Even though this branch is much smaller we expect actual research to primarily use this branch
+       // given how difficult it is to calculate fermat pseudoprimes
+       if self.leading_zeros() > 24 {
+         let sqrtn = (*self as f64).sqrt();
+	   
+	   for (idx,inv) in SQRTINV.iter().enumerate(){
+	      
+	      let ki = (sqrtn*inv) as i64;
+	      let k = ki as u64;
+	      let a = (idx+2) as u64;
+	      let lhs = k+1;
+	      let rhs = a*k+1;
+	      if (lhs as u128)*(rhs as u128)==*self{
+	        if lhs.is_prime() && rhs.is_prime(){
+	         let mut res = Factorization::new();
+	           res.factors.push(lhs as u128);
+	           res.factors.push(rhs as u128);
+	           res.powers.push(1);
+	           res.powers.push(1);
+	           return Some(res);
+	        }
+	        else{
+	          return None;
+	        }
+	      }
+	   }
+       return None;
+       } else {
+          for i in 2..65{
+            let k = (*self/i).isqrt();
+            let lhs = k+1;
+            let rhs = i*k+1;
+            if lhs*rhs==*self{
+               if lhs.is_prime() && rhs.is_prime(){
+	         let mut res = Factorization::new();
+	           res.factors.push(lhs);
+	           res.factors.push(rhs);
+	           res.powers.push(1);
+	           res.powers.push(1);
+	           return Some(res);
+            }
+          }
+       }
+         return None;
+       }
     }
 
     fn ord(&self, a: Self) -> Option<Self> {

@@ -142,8 +142,11 @@ impl<T: Natural> CompVector<T> {
         // If multiplier defined use it, otherwise calculate it
         let mul = if let Some(mx) = multiplier {
             mx
-        } else {
-            let iterations = 262144000 / self.elements.len();
+        } else { // Restrict the search to use the maximum memory
+            let max_iter = (self.memory_max as usize/(4*dim)) as f64;
+            // For large sets this is very slow to evaluate so we recalibrate it
+            let iterations = (max_iter*((self.elements.len() as f64).log2().recip())).ceil() as usize;
+            //println!("{iterations}");
             hash_search(&self.elements[..], dim, iterations)
         };
 

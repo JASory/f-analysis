@@ -11,7 +11,7 @@ pub struct Factorization<T: Natural> {
 }
 
 impl<T: Natural> Factorization<T> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             factors: vec![],
             powers: vec![],

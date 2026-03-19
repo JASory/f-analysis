@@ -1,4 +1,4 @@
-use crate::{natural::factor::Factorization, CompVector, FResult, Interval, Pseudoprime};
+use crate::{natural::factor::Factorization, CompVector, FResult, Interval, Pseudoprime,natural::finite::FiniteArith};
 
 ///  
 ///  Trait implementing necessary functions for generic evaluation
@@ -18,6 +18,7 @@ pub trait Natural:
     + std::convert::From<u64>
     + std::str::FromStr
     + 'static
+    + FiniteArith
 {
     /// Additive Identity; 0
     const ZERO: Self;
@@ -36,13 +37,19 @@ pub trait Natural:
     /// Returns the Minimum and Maximum of a 2-tuple
     fn min_max(&self, otra: Self) -> (Self, Self);
 
-    fn wrapping_sub(&self, otra: Self) -> Self;
+//    fn wrapping_sub(&self, otra: Self) -> Self;
 
     /// (x*multiplier / 2^shift) mod 2^32
     fn hash_shift(&self, shift: usize, multiplier: u32) -> usize;
+    
+    // Detect if N is a semiprime of the form (pk+1)(qk+1) 
+    //fn is_semiprime_k(&self, p: u64, q: u64) -> bool;
+    /// Detect if N is a semiprime of the form (pk+1)(qk+1) 
+    fn is_spk(&self,p: u64,q: u64) -> bool;
+    /// Heuristic check for semiprimes of the form (pk+1)(qk+1), may pass some composites that are not semiprimes
+    fn is_spkh(&self,p: u64, q: u64) -> bool;
 
-    fn is_semiprime_k(&self, a: usize) -> bool;
-
+    //fn is_fractional_k(&self,a: usize, b: usize) -> bool;
     // 4x+1 component to the number of the form (x+1)(4x+1)
     fn even_complement(&self, k: Self) -> Self;
 
@@ -105,8 +112,15 @@ pub trait Natural:
     /// except in the case where p \in 2Z+1 AND n \in 4Z
     fn exp_unit(&self, p: Self, n: Self) -> bool;
 
-    /// Count of the fermat pseudoprimes,strong pseudoprimes
-    fn pseudoprime_count(&self) -> (Self, Self);
+    /// Number of the solutions to a^n-1 = 1 mod n, and the stronger case, includes the trivial case of 1 
+    ///
+    /// Utilises SPK factor as the typical candidates of interest will be fermat pseudoprimes
+    fn fermat_solution_count(&self) -> (Self, Self);
+    
+    /// Ratio of fermat solutions to φ(n) 
+    ///
+    /// Utilises SPK factor as the typical candidates of interest will be fermat pseudoprimes
+     fn fermat_solution_ratio(&self) -> (f64,f64);
 
     // FIXME Remove this?
     fn semi_fermat(&self, p: Self, q: Self) -> bool;
@@ -115,6 +129,7 @@ pub trait Natural:
     // fn semi_sprp(&self, p: Self, q: Self) -> bool;
 
     fn sqr_fermat(&self, p: Self) -> bool;
+    
     /// Jacobi symbol
     fn jacobi(&self, other: Self) -> i8;
 
@@ -154,6 +169,11 @@ pub trait Natural:
     fn is_square(&self) -> bool;
     // Factorisation of N
     fn factor(&self) -> Option<Factorization<Self>>;
+    
+    /// Fast factorisation of certain forms of semiprimes that comprise 50% of strong fermat pseudoprimes 
+    ///
+    /// N < 2^102 utilises floating-point arithmetic to reliably factor, that interval runs in about 3x the cost of a 64-bit primality test
+    fn spk_factor(&self) -> Option<Factorization<Self>>;
 
     // General multiplicative order
     fn ord(&self, a: Self) -> Option<Self>;

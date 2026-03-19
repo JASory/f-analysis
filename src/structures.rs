@@ -11,6 +11,7 @@ pub(crate) mod store;
 pub(crate) mod wieferich;
 pub(crate) mod residue;
 pub(crate) mod monier;
+pub(crate) mod solvector;
 
 
 pub use base::BaseSeq;
@@ -26,3 +27,4 @@ pub use prime::Primes;
 pub use wieferich::WieferichPrime;
 pub use residue::ResidueClass;
 pub use monier::MonierSemiprime;
+pub use solvector::SolVector;

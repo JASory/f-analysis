@@ -7,6 +7,51 @@ pub struct ResidueClass{
   pub ring: u64,
 }
 
+/*
+
+  RClass api
+  
+  Cardinality
+  Sort
+  Is_sorted
+  Quadratic Residues
+  Nonquadratic residues
+  
+  Quadratic Residues of composite
+  
+  Nonquadratic Residues of composite
+  
+  In-place CRT solve of coprime rings to a single residue class
+   special case 1 mod n
+  
+  In-place CRT solve of noncoprime rings to a single residue class
+   special case 1 mod n
+   // Set non-solutions to 0 mod n
+   
+  Unify two coprime residue classes
+  
+  Unify two noncoprime residue classes
+  
+  prime_units
+  
+  primorial_units
+  
+  filter the Monier-Rabin semiprimes
+  
+  Map to a wheel array
+  
+  split the residue classes 
+
+*/
+
+/*
+  #[derive(Clone)]
+  pub struct ResidueClass<T: Natural>{
+    pub(crate) elements: Vec<T>,
+    pub ring: T,
+  }
+*/
+
 struct Signature{
   sig: Vec<u64>,
 }
@@ -60,6 +105,15 @@ impl ResidueClass{
    pub fn sort(&mut self){
       self.elements.sort();
    }
+   // Detects if \forall x_i x_{i+1} is greater or equal to x_i
+   pub fn is_sorted(&self)-> bool{
+       for idx in 0..self.cardinality()-1{
+          if self.elements[idx] > self.elements[idx+1]{
+            return false;
+          }
+       }
+       true
+   }
    
    pub fn iter(&self) -> std::slice::Iter<u64>{
        self.elements.iter()
@@ -90,7 +144,7 @@ impl ResidueClass{
    // The quadratic residues of N
    pub fn from_qr(n: u64) -> Self{
      let mut r = std::collections::HashSet::new();
-     for i in 1..n{
+     for i in 1..(n+1)/2{
         r.insert((i*i)%n);
      }
      let mut s =r.drain().collect::<Vec<u64>>();
@@ -130,7 +184,30 @@ impl ResidueClass{
       }
       Self::new(res,n_ring)
    }
+   /*
    
+   a mod n 1 mod p
+   
+   Get x,y such that ax mod p = 1 and 1y mod n = 1
+   
+   (g,inv1) <- gcd_bz(ring_1,ring_2);
+   NewRing <- ring_1*ring_2;
+   rhs <- inv1*ring_1;
+   lcofactor <- ring2
+   loop{
+     residue <- residue*lcofactor+rhs
+   }
+   
+   pub fn coprime_one(&mut self, otherring: u64){
+       (g,inv1,inv2) <- EEA(ring_1,ring_2);
+       NewRing <- ring_1*ring_2
+       rhs <- 1*inv1*ring_1
+       lcofactor <- inv2*ring2
+       loop {
+       residue <- residue*lcofactor+rhs
+       }
+   }
+   */
    /*
      let (g,inv1,inv2) = ring_1.extended_gcd(ring_2);
    
@@ -142,21 +219,24 @@ impl ResidueClass{
     (((lhs + rhs)%n_ring128) as u64)
    */
    
+   pub fn coprime_unit_inplace(&mut self, ring: u64){
+      debug_assert!(self.ring.gcd(ring)==1);
+      
+      let (g,inv1,inv2) = self.ring.extended_gcd(ring);
+      
+      let new_ring = (self.ring*ring) as u128;
+      let rhs = (inv1 as u128*self.ring as u128)%new_ring;
+      let lcofactor = (inv2 as u128 * ring as u128)%new_ring;
+      
+      for i in self.elements.iter_mut(){
+         *i=(((*i as u128)*lcofactor+rhs)%new_ring) as u64;
+      }
+      self.ring=new_ring as u64;
+   }
+   /*
    // in-place promotion, coprime rings are guaranteed to have solutions, 
    // so we can simply update the vector in-place
    pub fn coprime_promote(&mut self, residue: u64, ring: u64){
-     /*
-        New algorithm 
-        
-        (g,inv1,inv2) <- EEA (ring_1,ring_2)
-        New_ring <- ring_1*ring_2 
-        rhs <- res_2 * inv1*ring_1        
-        lcofactor <- inv2*ring2 
-        
-        loop{
-          residue <- residue*lcofactor + rhs
-        }
-     */
        debug_assert!(self.ring.gcd(ring)==1);
        let (g,inv1,inv2) = self.ring.extended_gcd(ring);
        let new_ring = (self.ring*ring) as u128;
@@ -164,39 +244,83 @@ impl ResidueClass{
        let lcofactor = ((inv2 as u128)*(ring as u128))%new_ring;
        
        for i in self.elements.iter_mut(){
-           *i= ((((*i as u128)*lcofactor)%new_ring + rhs)%new_ring) as u64;
+         *i=(((*i as u128)*lcofactor+rhs)%new_ring) as u64;
        }
        self.ring = new_ring as u64;
-       /*
-       Old algorithm
-       
-       for i in self.elements.iter_mut(){
-          *i=c_crt(*i,self.ring,residue,ring);
-       }
-       self.ring *=ring;
-       */
    }
+   */
    
    
-   
-   pub fn coprime_promote_par(&mut self, residue: u64, ring: u64){
+   pub fn coprime_promote(&mut self, residue: u64, ring: u64){
+       use std::thread;
+              debug_assert!(self.ring.gcd(ring)==1);
        let tc = thread_count();
-       let nring = ring*self.ring;
-       let mut thread_vec = vec![];
-       for mut i in self.partition(tc){
-           thread_vec.push(std::thread::spawn(move||{
-            i.coprime_promote(residue,ring);
-            i
-           }))
-       }
-       let mut res = ResidueClass::new(vec![],nring);
-       for i in thread_vec{
-           res.append(&mut i.join().unwrap())
-       }
-       *self=res;
+       let (g,inv1,inv2) = self.ring.extended_gcd(ring);
+       let new_ring = (self.ring*ring) as u128;
+       let rhs = ((residue as u128)*((inv1 as u128)*(self.ring as u128)%new_ring))%new_ring;
+       let lcofactor = ((inv2 as u128)*(ring as u128))%new_ring;
+       
+       let card = self.cardinality();
+       // FIXME handle partitioning more efficiently, we probably want to run over the remainder in one existing thread
+       // rather than spawning a whole new one for only a handful of elements
+       // Additionally while the single-threaded form is very fast the crossover is lower than 1 million elements
+       if card > 1_000_000{
+        let sector = self.elements.len()/tc;
+       
+        let _ = thread::scope(|scope| {
+       
+         for slice in self.elements.chunks_mut(sector) {
+        
+             scope.spawn(|| {
+               for j in slice.iter_mut(){
+                  *j=(((*j as u128)*lcofactor+rhs)%new_ring) as u64;
+               }
+             });
+         }
+       });
+       
+       self.ring=new_ring as u64;
+       
+     } else {
+     
+        for i in self.elements.iter_mut(){
+          *i=(((*i as u128)*lcofactor+rhs)%new_ring) as u64;
+        }
+        self.ring = new_ring as u64;
+      }
+     
    }
-   
+   // Faster special case of units
    // List of units to a prime [1;p-1]
+   pub fn units_prime(p: u64) -> Self{
+       let mut res = vec![];
+       
+       for i in 1..p{
+          res.push(i);
+       }
+      Self::new(res,p)
+   }
+   /*
+   // return the units of a number
+   pub fn units(x: u64) -> Self{
+     // Factorise x, determine the units of the perfect power's 
+     // Compose using CRT
+     // r_i = units of p
+     // rp_i = k*p+r_i \forall k < p
+     // CRT rp_i \forall factors of x
+     // let fctrs = x.factor();
+   }
+   */
+   /*
+   // maps the residue classes to a wheel
+   pub fn to_wheel(&self) -> Vec<u16>{
+         
+       for i in 0..self.len()-1{
+          
+       }
+   }
+   */
+      /// List of units to a prime [1;p-1]
    pub fn unit_prime(p: u64) -> Self{
        let mut res = vec![];
        

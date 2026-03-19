@@ -6,7 +6,7 @@ use crate::Natural;
    Out: The range of the elements
 */
 
-fn delta(x: &[u32]) -> u32 {
+fn range(x: &[u32]) -> u32 {
     let mut max = x[0];
     let mut min = x[0];
 
@@ -29,6 +29,44 @@ fn delta(x: &[u32]) -> u32 {
    candidates include minimising arithmetic standard deviation or arithmetic variance
 */
 
+
+pub(crate) fn hash_search<T: Natural>(ce: &[T],dimen: usize,iterations: usize) -> u32{
+    debug_assert!(dimen.is_power_of_two());
+    // Maximum permitted delta between minimum and maximum values (i.e range of elements)
+    let mut delta: u32 = u32::MAX;
+    // Multiplier initialised to zero
+    let mut minmultiplier: u32 = 0;
+    // Divisor shift, as hash is computed over 2^32
+    let shift = (32 - dimen.trailing_zeros()) as usize;
+    // Zero initialised array for the buckets of the hash
+    let values = vec![0u32; dimen];
+    
+    for _ in 0..iterations{
+    
+       let mut values = vec![0u32; dimen];
+       
+       let multiplier = rand() as u32;
+       // Count how many values are mapped to each partition
+       for el in ce.iter(){
+          let idx = el.hash_shift(shift,multiplier);
+          values[idx]+=1;
+       }
+       // Calculate the range of the elements
+       let new_delta = range(&values[..]);
+       // Record the multiplier that produces the lowest range
+       if new_delta < delta{
+          delta = new_delta;
+          minmultiplier = multiplier;
+       }
+       
+    }
+    
+    minmultiplier
+    
+    
+}
+
+/*
 pub(crate) fn hash_search<T: Natural>(ce: &[T], dimen: usize, interval: usize) -> u32 {
     // Maximum permitted delta between minimum and maximum values (i.e range of elements)
     let mut dlt: u32 = 70000000;
@@ -37,7 +75,7 @@ pub(crate) fn hash_search<T: Natural>(ce: &[T], dimen: usize, interval: usize) -
     // Divisor shift, as hash is computed over 2^32
     let divisor = (32 - dimen.trailing_zeros()) as usize;
     // Zero initialised array for the buckets of the hash
-    let values = vec![0; dimen];
+    let values = vec![0u32; dimen];
     // Array of
     let mut valvec = vec![values; interval];
     // List of candidate multipliers
@@ -61,7 +99,7 @@ pub(crate) fn hash_search<T: Natural>(ce: &[T], dimen: usize, interval: usize) -
 
     return magic;
 }
-
+*/
 /*
     Hash search without large allocation, current algorithm is extremely slow and not used anywhere
     This is only usable if the standard hash search requires too much memory (extremely unlikely)

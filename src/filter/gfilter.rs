@@ -89,22 +89,40 @@ impl<const S: usize> GenericFilter for Trial<S> {
     }
 }
 
-impl<const A: usize> GenericFilter for SPK<A> {
+impl<const P: u64, const Q: u64> GenericFilter for SPKH<P,Q> {
     fn filter_check<T: Natural>(x: T) -> bool {
-        x.is_semiprime_k(A)
+        x.is_spkh(P,Q)
     }
 }
 
-impl<const A: usize> GenericFilter for SPKA<A> {
+impl<const A: usize> GenericFilter for SPKAH<A> {
     fn filter_check<T: Natural>(x: T) -> bool {
         for i in 2..A {
-            if x.is_semiprime_k(i) {
+            if x.is_spkh(1,i as u64) {
                 return true;
             }
         }
         return false;
     }
 }
+
+impl<const P: u64, const Q: u64> GenericFilter for SPK<P,Q> {
+    fn filter_check<T: Natural>(x: T) -> bool {
+        x.is_spk(P,Q)
+    }
+}
+
+impl<const A: usize> GenericFilter for SPKA<A> {
+    fn filter_check<T: Natural>(x: T) -> bool {
+        for i in 2..A {
+            if x.is_spk(1,i as u64) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 
 impl<const S: usize> GenericFilter for Power<S> {
     fn filter_check<T: Natural>(x: T) -> bool {

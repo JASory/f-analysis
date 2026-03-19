@@ -1,5 +1,4 @@
-use crate::{structures::{BaseSeq,ResidueClass,store::Persistent},search::thread_count,Epz,FResult};
-
+use crate::{structures::{BaseSeq,ResidueClass,store::Persistent},search::thread_count,Epz,FResult, computation::compio::*};
 /*
 
   Estimation of Jaeschke's psi_k function 
@@ -26,34 +25,6 @@ enum Execution{
    List,
 }
 
-fn appender(data: &str, file: &str){
-   use std::io::{Write,Seek,SeekFrom};
-   let mut file = std::fs::OpenOptions::new().write(true).open(file).unwrap();
-   file.seek(SeekFrom::End(0));
-   file.write(&data.as_bytes());
-}
-
-// 
-fn load_bounds(input: &str) -> Option<(u64,u64)>{
-   let strin = std::fs::read_to_string(input).unwrap();
-   
-   let args = strin.split_whitespace().collect::<Vec<&str>>();
-   match args.len(){
-    1 => {
-      match args[0].parse::<u64>(){
-        Ok(x) => return Some((0,x)),
-        Err(_) => return None,
-      }
-    }
-    2 => {
-     match (args[0].parse::<u64>(),args[1].parse::<u64>()){
-      (Ok(x),Ok(y)) => Some((x,y)),
-      _=> None,
-     }
-    }
-    _ => return None,
-   }
-}
 
 /**
 Large scale estimation of Jaeschke's Ψ function. Ψ(n) is defined as the minimum composite that passes the

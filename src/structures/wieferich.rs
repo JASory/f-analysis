@@ -27,7 +27,7 @@ impl WieferichPrime {
     pub fn cardinality(&self) -> usize {
         self.primes.len()
     }
-
+    // calculate the pseudoprimes with a square factor less than b
     pub fn pseudoprimes(&self, b: u64) -> Vec<u64> {
         let mut res = vec![];
         for i in self.primes.iter() {

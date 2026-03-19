@@ -31,11 +31,15 @@ pub struct Miller;
 /// Monier-Rabin composites of the form (2x+1)(4x+1)
 pub struct MRC;
 
-/// Semiprimes of the form (k+1)(ak+1) where A is a constant
-pub struct SPK<const A: usize>;
+/// Semiprimes of the form (pk+1)(qk+1) where P and Q is are constant
+pub struct SPK<const P: u64, const Q: u64>;
+/// Semiprimes of the form (pk+1)(qk+1) where P and Q is are constant. Calculated probabilistically, some other composites of the same form will be passed
+pub struct SPKH<const P: u64, const Q: u64>;
 
 /// All semiprimes of the form (k+1)(ak+1) where A ranges from 2 to X exclusive
 pub struct SPKA<const A: usize>;
+/// All semiprimes of the form (k+1)(ak+1) where A ranges from 2 to X exclusive. Calculated probabilistically
+pub struct SPKAH<const A: usize>;
 
 /// Strong Fermat test of the form SF(n,Sqrt(n/A)+1)
 pub struct SFSqr<const A: usize>;
@@ -51,5 +55,8 @@ pub struct Prime;
 
 /// Composites
 pub struct Composite;
-
+/// true for all inputs
 pub struct Verum;
+
+/// False fo rall inputs
+pub struct Falsum;

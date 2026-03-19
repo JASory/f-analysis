@@ -81,35 +81,61 @@ impl<T: Natural> Interval<T> {
     }
 
     pub fn wieferich_search(&self, a: u64) -> WieferichPrime {
+    
+        fn mod_prime(x: u64) -> bool{
+           let mut idx = 10;
+           while idx < 256{
+             let prod = x.wrapping_mul(machine_prime::PRIME_TABLE[idx]);
+             if prod <= machine_prime::PRIME_TABLE[idx+1]{
+                return prod==1;
+             }
+             idx+=2;
+           }
+           machine_prime::is_prime_wc(x)
+        }
+        /*
+            let subproc = |inf: u64, sup: u64, base: u64| -> Vec<u64> {
+              let mut res = vec![];
+               for i in inf..sup{
+                  if i.is_prime(){
+                    if base.sqr_fermat(i){
+                       res.push(i);
+                    }
+                  }
+               }
+               res
+            };
+            */
+    
         let subproc = |inf: u64, sup: u64, base: u64| -> Vec<u64> {
             let mut res = vec![];
-            for i in inf..sup {
+            for i in inf..sup { // FIXME Replace with simple addition
                 let n = PRIMORIAL * i;
 
                 for i in WHEEL {
                     let p = n + i;
-                    if base.sqr_fermat(p) {
-                        if p.is_prime() {
+                        if mod_prime(p){
+                        if base.sqr_fermat(p){
                             res.push(p);
                         }
-                    }
+                      }
                 }
             }
             res
         };
-
+/**/
         let supremum = self.sup.to_u64() / PRIMORIAL;
         let infimum = self.inf.to_u64() / PRIMORIAL;
         // Check for small primes
 
         let mut res = vec![];
-
+        if infimum < 12{
         for i in [2u64, 3, 5, 7, 11] {
             if a.exp_residue(i - 1, i * i) == 1u64 {
                 res.push(i);
             }
         }
-
+       }
         let t_count = thread_count() as u64;
 
         let mut threads = vec![];
@@ -740,7 +766,7 @@ impl<T: Natural> Interval<T> {
         // FIXME eliminate to_u64, Return error if beyond some bound
         let stride = self
             .sup
-            .wrapping_sub(self.inf)
+            .finite_sub(self.inf)
             .euclidean(T::from(t_count))
             .0
             .to_u64();
@@ -799,7 +825,7 @@ impl<T: Natural> Interval<T> {
         // FIXME eliminate to_u64, Return error if beyond some bound
         let stride = self
             .sup
-            .wrapping_sub(self.inf)
+            .finite_sub(self.inf)
             .euclidean(T::from(t_count))
             .0
             .to_u64();

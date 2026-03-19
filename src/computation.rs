@@ -1,7 +1,14 @@
+/*
+   Large scale computation
+   
+   These involve computations that can take months and must be able to recover from a prior state
+*/
 
 mod psi;
-
+mod compio;
+mod wieferich;
 pub use psi::PsiEval;
+pub use wieferich::WieferichEval;
 
 /*
 computation 

@@ -25,16 +25,19 @@ pub(crate) mod primes;
 pub(crate) mod search;
 pub(crate) mod structures;
 pub(crate) mod computation;
+pub(crate) mod data;
+pub(crate) mod stat;
 
 mod enums;
 pub mod filter;
 
 pub use crate::enums::{FResult, Pseudoprime};
 pub use crate::natural::{Epz, Natural};
-pub use crate::computation::PsiEval;
+pub use crate::stat::Stats;
+pub use crate::computation::{PsiEval,WieferichEval};
 pub use crate::structures::{
     store::Persistent, BaseSeq, CompVector, Constructor, CounterExamples, DataVector, HashTable,
-    Interval, PCGenerator, Primes, SOSet, SmallOrd, WieferichPrime, ResidueClass
+    Interval, PCGenerator, Primes, SOSet, SmallOrd, WieferichPrime, ResidueClass,SolVector
 };
 
 /*

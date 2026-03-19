@@ -22,29 +22,20 @@ impl FormCheck for Square {
     }
 }
 
-impl<const A: usize> FormCheck for SPK<A> {
+impl<const P: u64, const Q: u64> FormCheck for SPK<P,Q>{
     fn is_form<T: Natural>(x: T) -> bool {
-        //x.is_semiprime_k(A)
         Self::filter_check(x)
     }
 }
 
 impl<const A: usize> FormCheck for Power<A> {
     fn is_form<T: Natural>(x: T) -> bool {
-        //x.is_power_of(A)
         Self::filter_check(x)
     }
 }
 
 impl<const A: usize> FormCheck for SPKA<A> {
     fn is_form<T: Natural>(x: T) -> bool {
-        /*
-        for i in 2..A {
-            if x.is_semiprime_k(i) {
-                return true;
-            }
-        }
-        return false; */
         Self::filter_check(x)
     }
 }
